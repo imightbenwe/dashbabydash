@@ -209,18 +209,19 @@
                 </a>
             </div>
 
-            <!-- Video Placeholder (Anchor) -->
+            <!-- YouTube Video Embed -->
             <div class="relative mx-auto max-w-5xl rounded-xl border border-white/20 p-2 glass-panel">
-                <div class="aspect-video bg-black/80 rounded-lg relative overflow-hidden group cursor-pointer flex items-center justify-center">
-                    <div class="absolute inset-0 bg-gradient-to-tr from-neon-pink/20 to-neon-cyan/20 opacity-40 group-hover:opacity-60 transition-opacity"></div>
-                    <!-- Play Button Visual -->
-                    <div class="w-20 h-20 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-play text-white text-3xl ml-2"></i>
-                    </div>
-                    <div class="absolute bottom-6 left-6 text-left">
-                        <p class="text-white font-display font-bold uppercase tracking-widest text-sm">Watch the Demo</p>
-                        <p class="text-gray-400 font-sans text-xs">See how I automate 10 hours of work (2 min)</p>
-                    </div>
+                <div class="aspect-video bg-black rounded-lg overflow-hidden">
+                    <iframe 
+                        width="100%" 
+                        height="100%" 
+                        src="https://www.youtube.com/embed/IA6F1Jp-cPI" 
+                        title="YouTube video player" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                        allowfullscreen
+                        class="w-full h-full">
+                    </iframe>
                 </div>
             </div>
         </div>

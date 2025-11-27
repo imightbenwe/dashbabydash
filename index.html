@@ -135,36 +135,35 @@
 
         .cta-button {
             position: relative;
-            overflow: visible;
         }
 
         .cta-button .border-skew {
             position: absolute;
-            inset: 0;
-            border: 2px solid #ff00ff;
+            inset: -2px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff);
+            background-size: 200% 100%;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            padding: 2px;
             transform: skew(-10deg);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            transition: all 0.4s ease;
         }
 
         .cta-button:hover .border-skew {
-            transform: skew(-10deg) scale(1.05);
-            border-width: 3px;
+            background-position: 100% 0;
+            padding: 3px;
+            inset: -3px;
             box-shadow: 
                 0 0 20px rgba(255, 0, 255, 0.6),
-                0 0 40px rgba(255, 0, 255, 0.3),
-                inset 0 0 20px rgba(255, 0, 255, 0.2);
-            animation: border-pulse 1.5s ease-in-out infinite;
+                0 0 40px rgba(0, 255, 255, 0.4);
+            animation: gradient-shift 2s linear infinite;
         }
 
-        @keyframes border-pulse {
-            0%, 100% { 
-                border-color: #ff00ff;
-                filter: hue-rotate(0deg);
-            }
-            50% { 
-                border-color: #00ffff;
-                filter: hue-rotate(180deg);
-            }
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
         }
     </style>
 </head>

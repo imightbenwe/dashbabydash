@@ -10,6 +10,9 @@
     <!-- SEO Meta Tags -->
     <meta name="author" content="Dash Baby Dash!">
     <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#050505">
+    <link rel="canonical" href="https://www.dashbabydash.com/">
+    <meta property="og:url" content="https://www.dashbabydash.com/">
     <meta property="og:title" content="Shopify Automation & AI Dashboards | n8n Workflow Consultant">
     <meta property="og:description" content="Expert Shopify automation consultant specializing in custom AI dashboards, n8n workflow automation, and internal tools. Automate refunds, analytics, and admin tasks for e-commerce founders.">
     <meta property="og:type" content="website">
@@ -34,7 +37,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
     
     <!-- FontAwesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -132,39 +135,6 @@
             box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
             text-shadow: 0 0 8px rgba(255, 0, 255, 0.8);
         }
-
-        .cta-button {
-            position: relative;
-        }
-
-        .cta-button .border-skew {
-            position: absolute;
-            inset: 0;
-            transform: skew(-10deg);
-            pointer-events: none;
-        }
-
-        .cta-button .border-skew::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border: 2px solid #ff00ff;
-            transition: all 0.4s ease;
-        }
-
-        .cta-button:hover .border-skew::before {
-            border-width: 3px;
-            box-shadow: 
-                0 0 20px rgba(255, 0, 255, 0.8),
-                0 0 40px rgba(0, 255, 255, 0.5),
-                inset 0 0 30px rgba(255, 0, 255, 0.3);
-            animation: rainbow-border 2s linear infinite;
-        }
-
-        @keyframes rainbow-border {
-            0% { filter: hue-rotate(0deg); }
-            100% { filter: hue-rotate(360deg); }
-        }
     </style>
 </head>
 <body class="antialiased selection:bg-neon-pink selection:text-white">
@@ -191,7 +161,7 @@
                 </div>
                 <!-- Mobile menu button -->
                 <div class="md:hidden">
-                    <button id="mobile-menu-btn" class="text-white hover:text-neon-pink focus:outline-none">
+                    <button id="mobile-menu-btn" class="text-white hover:text-neon-pink focus:outline-none" aria-expanded="false" aria-label="Toggle navigation menu">
                         <i class="fa-solid fa-bars-staggered text-2xl"></i>
                     </button>
                 </div>
@@ -373,11 +343,11 @@
                     </p>
                     <ul class="text-sm text-gray-500 font-sans space-y-2">
                         <li class="flex items-center gap-2"><i class="fa-solid fa-check text-white"></i> No more end-of-month surprises</li>
-            <a href="#contact" onclick="window.open('https://calendly.com/your-calendly-link', '_blank'); return false;" class="cta-button group relative px-12 py-5 bg-transparent overflow-hidden rounded-none inline-block cursor-pointer">
-                <div class="absolute inset-0 w-0 bg-white transition-all duration-[250ms] ease-out group-hover:w-full opacity-10"></div>
-                <div class="border-skew"></div>
-                <span class="relative text-neon-pink font-display font-bold uppercase tracking-[0.2em] group-hover:text-white transition-colors">Book Strategy Call</span>
-            </a><!-- Build 2 -->
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-white"></i> Instant ROAS calculation</li>
+                    </ul>
+                </div>
+
+                <!-- Build 2 -->
                 <div class="bg-white/5 rounded-xl p-8 border border-white/10 hover:border-white/20 transition-colors">
                     <div class="mb-4 text-neon-cyan font-mono text-xs uppercase tracking-widest border border-neon-cyan/30 inline-block px-2 py-1 rounded">Automated Returns Agent</div>
                     <h3 class="text-2xl text-white font-display font-bold mb-4">Customer Support Automation</h3>
@@ -407,9 +377,9 @@
                 Let's discuss your custom build.
             </p>
             
-            <a href="#contact" onclick="window.open('https://calendly.com/your-calendly-link', '_blank'); return false;" class="group relative px-12 py-5 bg-transparent overflow-hidden rounded-none inline-block cursor-pointer">
+            <a href="https://calendly.com/your-calendly-link" target="_blank" rel="noopener noreferrer" class="cta-book-call group relative px-12 py-5 bg-transparent overflow-hidden rounded-none inline-block cursor-pointer">
                 <div class="absolute inset-0 w-0 bg-white transition-all duration-[250ms] ease-out group-hover:w-full opacity-10"></div>
-                <div class="absolute inset-0 border border-neon-pink skew-x-[-10deg]"></div>
+                <div class="absolute inset-0 border-2 border-neon-pink transform skew-x-[-10deg] transition-all duration-300"></div>
                 <span class="relative text-neon-pink font-display font-bold uppercase tracking-[0.2em] group-hover:text-white transition-colors">Book Strategy Call</span>
             </a>
             
@@ -439,17 +409,24 @@
 
     <!-- Mobile Menu Script -->
     <script>
-        const btn = document.getElementById('mobile-menu-btn');
-        const menu = document.getElementById('mobile-menu');
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('mobile-menu-btn');
+            const menu = document.getElementById('mobile-menu');
 
-        btn.addEventListener('click', () => {
-            menu.classList.toggle('hidden');
-        });
-        
-        document.querySelectorAll('#mobile-menu a').forEach(link => {
-            link.addEventListener('click', () => {
-                menu.classList.add('hidden');
-            });
+            if (btn && menu) {
+                btn.addEventListener('click', () => {
+                    menu.classList.toggle('hidden');
+                    const isExpanded = !menu.classList.contains('hidden');
+                    btn.setAttribute('aria-expanded', isExpanded);
+                });
+                
+                document.querySelectorAll('#mobile-menu a').forEach(link => {
+                    link.addEventListener('click', () => {
+                        menu.classList.add('hidden');
+                        btn.setAttribute('aria-expanded', 'false');
+                    });
+                });
+            }
         });
     </script>
 </body>

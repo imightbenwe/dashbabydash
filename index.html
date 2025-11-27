@@ -132,6 +132,40 @@
             box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
             text-shadow: 0 0 8px rgba(255, 0, 255, 0.8);
         }
+
+        .cta-button {
+            position: relative;
+            overflow: visible;
+        }
+
+        .cta-button .border-skew {
+            position: absolute;
+            inset: 0;
+            border: 2px solid #ff00ff;
+            transform: skew(-10deg);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .cta-button:hover .border-skew {
+            transform: skew(-10deg) scale(1.05);
+            border-width: 3px;
+            box-shadow: 
+                0 0 20px rgba(255, 0, 255, 0.6),
+                0 0 40px rgba(255, 0, 255, 0.3),
+                inset 0 0 20px rgba(255, 0, 255, 0.2);
+            animation: border-pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes border-pulse {
+            0%, 100% { 
+                border-color: #ff00ff;
+                filter: hue-rotate(0deg);
+            }
+            50% { 
+                border-color: #00ffff;
+                filter: hue-rotate(180deg);
+            }
+        }
     </style>
 </head>
 <body class="antialiased selection:bg-neon-pink selection:text-white">
@@ -340,11 +374,11 @@
                     </p>
                     <ul class="text-sm text-gray-500 font-sans space-y-2">
                         <li class="flex items-center gap-2"><i class="fa-solid fa-check text-white"></i> No more end-of-month surprises</li>
-                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-white"></i> Instant ROAS calculation</li>
-                    </ul>
-                </div>
-
-                <!-- Build 2 -->
+            <a href="#contact" onclick="window.open('https://calendly.com/your-calendly-link', '_blank'); return false;" class="cta-button group relative px-12 py-5 bg-transparent overflow-hidden rounded-none inline-block cursor-pointer">
+                <div class="absolute inset-0 w-0 bg-white transition-all duration-[250ms] ease-out group-hover:w-full opacity-10"></div>
+                <div class="border-skew"></div>
+                <span class="relative text-neon-pink font-display font-bold uppercase tracking-[0.2em] group-hover:text-white transition-colors">Book Strategy Call</span>
+            </a><!-- Build 2 -->
                 <div class="bg-white/5 rounded-xl p-8 border border-white/10 hover:border-white/20 transition-colors">
                     <div class="mb-4 text-neon-cyan font-mono text-xs uppercase tracking-widest border border-neon-cyan/30 inline-block px-2 py-1 rounded">Automated Returns Agent</div>
                     <h3 class="text-2xl text-white font-display font-bold mb-4">Customer Support Automation</h3>

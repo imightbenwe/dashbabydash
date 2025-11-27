@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/book",
+      "destination": "https://calendly.com/koenw77/15-minute-automation-discovery-call",
+      "permanent": false
+    }
+  ]
+}

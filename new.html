@@ -23,25 +23,25 @@
     <meta property="og:image" content="/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    
+
     <!-- Favicons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="manifest" href="/site.webmanifest">
-    
-    <!-- Google Fonts: Space Grotesk (Tech), Inter (Clarity) -->
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+
     <!-- FontAwesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Custom Tailwind Configuration -->
     <script>
         tailwind.config = {
@@ -512,13 +512,14 @@
     </section>
 
     <!-- NEW SECTION: Testimonials / Vibrational Feedback -->
-    <!-- <section class="py-24 relative">
+    <section class="py-24 relative">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 class="text-center text-xs font-mono uppercase tracking-[0.3em] text-gray-500 mb-12">
                 // Vibrational Feedback
             </h2>
             
             <div class="grid md:grid-cols-3 gap-8">
+                <!-- Testimonial 1 -->
                 <div class="relative">
                     <i class="fa-solid fa-quote-left text-4xl text-white/5 absolute -top-4 -left-2"></i>
                     <p class="text-gray-300 font-sans italic mb-6 relative z-10">
@@ -526,6 +527,7 @@
                     </p>
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-gray-700 rounded-full overflow-hidden">
+                             <!-- Placeholder for user image -->
                              <i class="fa-solid fa-user text-gray-500 w-full h-full flex items-center justify-center"></i>
                         </div>
                         <div>
@@ -535,6 +537,7 @@
                     </div>
                 </div>
 
+                <!-- Testimonial 2 -->
                 <div class="relative">
                     <i class="fa-solid fa-quote-left text-4xl text-white/5 absolute -top-4 -left-2"></i>
                     <p class="text-gray-300 font-sans italic mb-6 relative z-10">
@@ -551,6 +554,7 @@
                     </div>
                 </div>
 
+                <!-- Testimonial 3 -->
                 <div class="relative">
                     <i class="fa-solid fa-quote-left text-4xl text-white/5 absolute -top-4 -left-2"></i>
                     <p class="text-gray-300 font-sans italic mb-6 relative z-10">
@@ -568,20 +572,23 @@
                 </div>
             </div>
         </div>
-    </section> -->
+    </section>
 
     <!-- NEW SECTION: About / The Guide -->
     <section id="about" class="py-24 bg-white/5 border-t border-white/5">
         <div class="max-w-4xl mx-auto px-4 text-center">
             <div class="w-24 h-24 mx-auto rounded-full border-2 border-neon-pink p-1 mb-8 relative">
-                <img src="/bio.jpg" alt="Dash Baby Dash" class="w-full h-full rounded-full object-cover">
+                 <!-- Placeholder for YOUR photo -->
+                <div class="w-full h-full bg-gray-800 rounded-full flex items-center justify-center overflow-hidden">
+                    <span class="text-4xl">🧘‍♂️</span>
+                </div>
                 <div class="absolute bottom-0 right-0 w-6 h-6 bg-deep-void rounded-full flex items-center justify-center border border-white/20">
                     <i class="fa-solid fa-code text-[10px] text-neon-cyan"></i>
                 </div>
             </div>
             
             <h2 class="text-3xl font-display font-bold text-white mb-4 uppercase">Meet Your Tech Alchemist</h2>
-            <h3 class="text-neon-pink font-sans text-sm uppercase tracking-widest mb-8">Koen Wensing</h3>
+            <h3 class="text-neon-pink font-sans text-sm uppercase tracking-widest mb-8">Dash Baby Dash</h3>
             
             <p class="text-gray-300 font-sans text-lg leading-relaxed mb-8">
                 I operate at the intersection of <strong>Soul</strong> and <strong>System</strong>. 
@@ -632,31 +639,58 @@
     </section>
 
     <!-- Footer -->
-    <footer class="bg-black py-8 border-t border-white/5 relative z-10">
+    <footer class="bg-black py-12 border-t border-white/5 relative z-10">
         <div class="max-w-7xl mx-auto px-4">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                <div class="font-display font-bold text-xl text-white italic tracking-tighter">Dash Baby Dash!</div>
-                <div class="flex gap-6">
-                    <a href="#" aria-label="X (Twitter)" class="text-gray-600 hover:text-neon-pink transition-colors"><i class="fa-brands fa-x-twitter text-xl"></i></a>
-                    <a href="#" aria-label="Instagram" class="text-gray-600 hover:text-neon-pink transition-colors"><i class="fa-brands fa-instagram text-xl"></i></a>
-                    <a href="#" aria-label="LinkedIn" class="text-gray-600 hover:text-neon-cyan transition-colors"><i class="fa-brands fa-linkedin text-xl"></i></a>
+            <div class="flex flex-col md:flex-row justify-between items-start gap-8 mb-12">
+                
+                <!-- Brand -->
+                <div class="max-w-xs">
+                    <div class="font-display font-bold text-xl text-white italic tracking-tighter mb-4">
+                        Dash Baby Dash
+                    </div>
+                    <p class="text-xs text-gray-500 font-sans leading-relaxed">
+                        Digital systems architecture for the spiritual entrepreneur. <br>
+                        Rotterdam based, globally connected.
+                    </p>
+                </div>
+
+                <!-- Links -->
+                <div class="flex flex-col md:flex-row gap-12">
+                    <div>
+                        <h4 class="text-white font-bold font-display uppercase tracking-widest text-xs mb-4">Explore</h4>
+                        <ul class="space-y-2 text-xs text-gray-500 font-sans">
+                            <li><a href="#clarity" class="hover:text-neon-pink transition-colors">The Reset</a></li>
+                            <li><a href="#builds" class="hover:text-neon-cyan transition-colors">Case Studies</a></li>
+                            <li><a href="#about" class="hover:text-acid-green transition-colors">About</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="text-white font-bold font-display uppercase tracking-widest text-xs mb-4">Connect</h4>
+                        <div class="flex gap-4">
+                            <a href="#" aria-label="X (Twitter)" class="text-gray-600 hover:text-neon-pink transition-colors">
+                                <i class="fa-brands fa-x-twitter text-xl"></i>
+                            </a>
+                            <a href="#" aria-label="Instagram" class="text-gray-600 hover:text-neon-pink transition-colors">
+                                <i class="fa-brands fa-instagram text-xl"></i>
+                            </a>
+                            <a href="#" aria-label="LinkedIn" class="text-gray-600 hover:text-neon-cyan transition-colors">
+                                <i class="fa-brands fa-linkedin text-xl"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="border-t border-white/5 pt-4 pb-4">
-                <div class="text-center text-xs text-gray-600 font-sans space-y-1">
-                    <p class="font-semibold text-gray-500">Kayden Trading</p>
-                    <p>Strevelsweg 700, 3083AS Rotterdam, NL</p>
-                    <p>CoC: 98180908 | VAT: NL005315034B26</p>
-                    <p><a href="mailto:connect@dashbabydash.com" class="text-gray-500 hover:text-neon-pink transition-colors">connect@dashbabydash.com</a></p>
+
+            <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="text-gray-600 text-[10px] font-mono uppercase">
+                    © 2025 Dash Baby Dash. All Rights Reserved.
                 </div>
-            </div>
-            
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-t border-white/5 pt-4">
-                <div class="text-gray-600 text-xs font-mono uppercase">© 2025 Dash Baby Dash! All Rights Reserved</div>
-                <div class="flex gap-6 text-xs">
-                    <a href="privacy.html" class="text-gray-600 hover:text-neon-pink transition-colors">Privacy Policy</a>
-                    <a href="terms.html" class="text-gray-600 hover:text-neon-cyan transition-colors">Terms of Service</a>
+                 <div class="text-center md:text-right text-[10px] text-gray-700 font-sans">
+                    <p>Kayden Trading | KvK: 98180908</p>
+                </div>
+                <div class="flex gap-6 text-[10px] uppercase tracking-wide">
+                    <a href="privacy.html" class="text-gray-600 hover:text-neon-pink transition-colors">Privacy</a>
+                    <a href="terms.html" class="text-gray-600 hover:text-neon-cyan transition-colors">Terms</a>
                 </div>
             </div>
         </div>

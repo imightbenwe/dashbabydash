@@ -1,4 +1,10 @@
 {
+  "rewrites": [
+    {
+      "source": "/leadsapp/:path*",
+      "destination": "/leadsapp/:path*"
+    }
+  ],
   "redirects": [
     {
       "source": "/book",

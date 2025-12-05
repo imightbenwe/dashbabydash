@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toni | Manifestation & Nervous System Regulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'sage-50': '#F4F7F5',
+                        'sage-100': '#E3E9E4',
+                        'sage-300': '#A8BDB0',
+                        'sage-800': '#4A5D4F',
+                        'sand-100': '#F9F7F2',
+                        'sand-200': '#EBE5DA',
+                        'gold-400': '#D4AF37',
+                        'charcoal': '#2C2C2C',
+                    },
+                    fontFamily: {
+                        serif: ['"Cormorant Garamond"', 'serif'],
+                        sans: ['"Montserrat"', 'sans-serif'],
+                    },
+                    backgroundImage: {
+                        'grain': "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.05%22/%3E%3C/svg%3E')",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Utilities */
+        .glass-nav {
+            background: rgba(249, 247, 242, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .text-shadow {
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .fade-up {
+            animation: fadeUp 1s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        
+        /* Smooth Image Loading */
+        img {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-sand-100 text-charcoal font-sans antialiased relative">
+    
+    <!-- Noise Overlay Texture -->
+    <div class="fixed inset-0 bg-grain pointer-events-none z-50 opacity-40 mix-blend-multiply"></div>
+
+    <!-- Navigation -->
+    <nav class="glass-nav fixed w-full top-0 z-40 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-2xl font-serif font-semibold tracking-widest text-sage-800">TONI.</div>
+            <div class="hidden md:flex space-x-8 text-sm tracking-widest font-medium uppercase text-gray-600">
+                <a href="#philosophy" class="hover:text-gold-400 transition-colors">The Philosophy</a>
+                <a href="#about" class="hover:text-gold-400 transition-colors">About</a>
+                <a href="#offer" class="hover:text-gold-400 transition-colors">The Method</a>
+                <a href="#contact" class="hover:text-gold-400 transition-colors">Connect</a>
+            </div>
+            <a href="#offer" class="bg-sage-800 text-white px-6 py-2 rounded-full text-xs uppercase tracking-widest hover:bg-sage-300 hover:text-sage-800 transition-all duration-300 shadow-lg">
+                Get Aligned
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative h-screen flex items-center justify-center overflow-hidden">
+        <!-- Background Image with Overlay -->
+        <div class="absolute inset-0 z-0">
+            <img src="https://images.unsplash.com/photo-1603122630570-0b6b6c580192?q=80&w=2070&auto=format&fit=crop" alt="Ethereal light and nature" class="w-full h-full object-cover object-center opacity-90">
+            <div class="absolute inset-0 bg-gradient-to-b from-sand-100/30 via-transparent to-sand-100"></div>
+        </div>
+
+        <div class="relative z-10 text-center px-4 max-w-4xl mx-auto mt-16">
+            <span class="fade-up block text-xs md:text-sm tracking-[0.3em] uppercase text-sage-800 mb-4 font-medium">Nervous System Regulation & Manifestation</span>
+            <h1 class="fade-up delay-100 font-serif text-5xl md:text-7xl lg:text-8xl text-sage-800 leading-tight mb-6">
+                Manifestation without<br><i class="font-light text-gold-400">the panic.</i>
+            </h1>
+            <p class="fade-up delay-200 text-lg md:text-xl text-gray-700 font-light max-w-2xl mx-auto mb-10 leading-relaxed">
+                You don’t manifest what you want. You manifest who you <em>are</em>. 
+                A digital sanctuary to help you regulate your nervous system, dissolve the "invisible ceiling," and anchor into your new timeline.
+            </p>
+            <div class="fade-up delay-300 flex flex-col md:flex-row gap-4 justify-center items-center">
+                <a href="#philosophy" class="border border-sage-800 text-sage-800 px-8 py-3 rounded-full uppercase text-xs tracking-widest hover:bg-sage-800 hover:text-white transition-all duration-300">
+                    Explore the Container
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- The Resonance / Hook Section -->
+    <section id="philosophy" class="py-24 px-6 bg-white">
+        <div class="max-w-3xl mx-auto text-center">
+            <div class="w-px h-16 bg-gold-400 mx-auto mb-8"></div>
+            <h2 class="font-serif text-3xl md:text-4xl text-sage-800 mb-8">The "Invisible Ceiling" isn't a mindset block. <br>It's a safety mechanism.</h2>
+            <p class="text-gray-600 leading-loose mb-6 text-lg">
+                You’ve been doing the work. Visualizing. Scripting. Staying positive.
+                And just when things begin to flow, after a period of growth, old emotions or familiar chaotic situations resurface.
+            </p>
+            <p class="text-gray-600 leading-loose mb-10">
+                You might wonder, <em>“Why is this showing up again?”</em><br>
+                This isn’t a setback. It’s <strong>integration.</strong><br>
+                Your nervous system doesn't feel safe expanding yet, so it pulls you back to what's familiar. 
+                The Universe can only mirror what you feel ready to hold.
+            </p>
+            <div class="grid md:grid-cols-3 gap-8 mt-16">
+                <div class="p-6 bg-sand-100 rounded-2xl">
+                    <div class="text-gold-400 text-4xl mb-4">✦</div>
+                    <h3 class="font-serif text-xl mb-2 text-sage-800">Rewire</h3>
+                    <p class="text-sm text-gray-600">Identify the subconscious beliefs whispering that you aren't worthy.</p>
+                </div>
+                <div class="p-6 bg-sand-100 rounded-2xl">
+                    <div class="text-gold-400 text-4xl mb-4">✨</div>
+                    <h3 class="font-serif text-xl mb-2 text-sage-800">Regulate</h3>
+                    <p class="text-sm text-gray-600">Soothe the nervous system so expansion feels safe, not dangerous.</p>
+                </div>
+                <div class="p-6 bg-sand-100 rounded-2xl">
+                    <div class="text-gold-400 text-4xl mb-4">∞</div>
+                    <h3 class="font-serif text-xl mb-2 text-sage-800">Embody</h3>
+                    <p class="text-sm text-gray-600">Merge with the version of you who already lives the vision.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-24 px-6 bg-sage-50 relative overflow-hidden">
+        <!-- Decorative Circle -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-sage-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+        
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12">
+            <div class="w-full md:w-1/2 relative">
+                <div class="relative z-10 rounded-t-full overflow-hidden border-4 border-white shadow-xl aspect-[3/4] max-w-md mx-auto">
+                    <!-- Using the upscaled profile pic -->
+                    <img src="upscaled.png" 
+                         alt="Toni" 
+                         class="w-full h-full object-cover">
+                </div>
+                <!-- Floating 'Toni' signature feeling -->
+                <div class="absolute -bottom-6 -right-6 md:right-12 bg-white p-4 rounded-lg shadow-lg font-serif text-sage-800 italic">
+                    "It's not a setback, it's integration."
+                </div>
+            </div>
+            
+            <div class="w-full md:w-1/2">
+                <span class="text-xs tracking-[0.2em] text-gold-400 uppercase mb-2 block">The Guide</span>
+                <h2 class="font-serif text-4xl md:text-5xl text-sage-800 mb-6">Hi, I'm Toni.</h2>
+                <p class="text-gray-600 mb-6 leading-relaxed">
+                    For years, I tried to control outcomes instead of trusting my Higher Self. I lived in the gap between "knowing" manifestation intellectually and actually <em>being</em> the person who could hold it.
+                </p>
+                <p class="text-gray-600 mb-8 leading-relaxed">
+                    My journey required me to move from panic to grounded awareness. To stop pushing away what was already mine by vibrating in fear. Now, I help conscious creators like you regulate your nervous system so you can feel safe to hold more, grow, and expand into the new.
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    <span class="px-4 py-2 bg-white rounded-full text-xs uppercase tracking-wider text-sage-800 border border-sage-300">Manifestation</span>
+                    <span class="px-4 py-2 bg-white rounded-full text-xs uppercase tracking-wider text-sage-800 border border-sage-300">Nervous System</span>
+                    <span class="px-4 py-2 bg-white rounded-full text-xs uppercase tracking-wider text-sage-800 border border-sage-300">Mindset</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Vision Offer Section -->
+    <section id="offer" class="py-24 px-6 bg-sage-800 text-sand-100 relative">
+        <div class="max-w-5xl mx-auto text-center">
+            <h2 class="font-serif text-4xl md:text-6xl mb-6 text-white">The Quantum Identity Method</h2>
+            <p class="text-sage-100 text-lg mb-12 max-w-2xl mx-auto font-light">
+                Stop creating from your past. Start creating from your future. A comprehensive container to dissolve the subconscious blocks keeping you in loops.
+            </p>
+            
+            <div class="grid md:grid-cols-2 gap-8 mb-16">
+                <!-- Offer 1: The Lead Magnet (Instant Value) -->
+                <div class="bg-sage-800 border border-sage-300/30 p-8 rounded-xl hover:bg-sage-800/50 transition-all group">
+                    <div class="h-12 w-12 bg-gold-400/20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                        <div class="text-gold-400 text-2xl">🌙</div>
+                    </div>
+                    <h3 class="font-serif text-2xl mb-2">"Safety in Expansion"</h3>
+                    <p class="text-sage-300 text-sm uppercase tracking-widest mb-4">Free Quantum Meditation</p>
+                    <p class="text-gray-300 mb-6 text-sm">Teach your body that it is safe to receive. This audio transmission will regulate your nervous system and prepare you for the leap.</p>
+                    <a href="#" class="inline-block border-b border-gold-400 pb-1 text-gold-400 hover:text-white transition-colors">Download for Free</a>
+                </div>
+
+                <!-- Offer 2: The Core Program (Vision) -->
+                <div class="bg-sand-100 text-sage-800 p-8 rounded-xl transform md:-translate-y-4 shadow-2xl">
+                    <div class="h-12 w-12 bg-sage-800/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <div class="text-sage-800 text-2xl">✦</div>
+                    </div>
+                    <h3 class="font-serif text-2xl mb-2">Aligned Action Activation</h3>
+                    <p class="text-sage-600 text-sm uppercase tracking-widest mb-4">Signature Workbook & Guide</p>
+                    <p class="text-gray-600 mb-6 text-sm">
+                        Identify hidden beliefs, rewire the stories that don't align with your new reality, and bridge the gap between who you are and who you are becoming.
+                    </p>
+                    <button class="bg-sage-800 text-white px-8 py-3 rounded-full text-xs uppercase tracking-widest hover:bg-sage-700 transition-all w-full">
+                        Get the Workbook
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Proof Section -->
+    <section class="py-24 px-6 bg-white">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="font-serif text-3xl text-sage-800">Echoes from the Community</h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Review 1 -->
+                <div class="p-8 bg-sage-50 rounded-tl-[3rem] rounded-br-[3rem]">
+                    <div class="text-gold-400 text-2xl mb-4"><i class="fas fa-quote-left"></i></div>
+                    <p class="text-gray-600 italic mb-6">"This hit deep. I’ve been feeling some of those old emotions again lately and this helped me see them differently. Thank you for this."</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-sage-200 rounded-full flex items-center justify-center text-xs font-bold text-sage-800">PG</div>
+                        <span class="text-xs font-bold uppercase tracking-wide text-sage-800">@pause.to.grow</span>
+                    </div>
+                </div>
+                <!-- Review 2 -->
+                <div class="p-8 bg-sage-50 rounded-tl-[3rem] rounded-br-[3rem]">
+                    <div class="text-gold-400 text-2xl mb-4"><i class="fas fa-quote-left"></i></div>
+                    <p class="text-gray-600 italic mb-6">"This message feels like such powerful truth ✨ that moment when you finally realize your old patterns were never your essence, just your armor."</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-sage-200 rounded-full flex items-center justify-center text-xs font-bold text-sage-800">LW</div>
+                        <span class="text-xs font-bold uppercase tracking-wide text-sage-800">@lovevanta_warriors</span>
+                    </div>
+                </div>
+                <!-- Review 3 -->
+                <div class="p-8 bg-sage-50 rounded-tl-[3rem] rounded-br-[3rem]">
+                    <div class="text-gold-400 text-2xl mb-4"><i class="fas fa-quote-left"></i></div>
+                    <p class="text-gray-600 italic mb-6">"I think there is a misconception that we do the work and then it’s done... There is always more work to do and once we conquer one level then the universe sends us the next."</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-sage-200 rounded-full flex items-center justify-center text-xs font-bold text-sage-800">RC</div>
+                        <span class="text-xs font-bold uppercase tracking-wide text-sage-800">@relationships.coaching</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact / Footer -->
+    <footer id="contact" class="bg-charcoal text-sand-100 py-20 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="font-serif text-4xl mb-8">Ready to stop pushing away what's already yours?</h2>
+            <p class="text-gray-400 mb-12 font-light">
+                Your next level requires a nervous system that feels safe enough to hold it. Let's begin.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-6 justify-center">
+                <a href="#" class="bg-gold-400 text-charcoal px-8 py-4 rounded-full text-xs uppercase tracking-widest hover:bg-white transition-all font-bold">
+                    Download "Safety in Expansion"
+                </a>
+                <a href="https://instagram.com/nourishedsoul11" target="_blank" class="border border-gray-600 text-white px-8 py-4 rounded-full text-xs uppercase tracking-widest hover:border-white transition-all">
+                    Follow on Instagram
+                </a>
+            </div>
+            
+            <div class="mt-24 border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500 tracking-widest uppercase">
+                <p>&copy; 2025 Toni | Nourished Soul. All rights reserved.</p>
+                <p class="mt-4 md:mt-0">Built with Intention</p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

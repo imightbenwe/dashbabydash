@@ -30,6 +30,11 @@ export default function Home() {
   const [isGeneratingDemo, setIsGeneratingDemo] = useState(false);
   const [demoResult, setDemoResult] = useState<any>(null);
 
+  // Website scraper state
+  const [scraperUrl, setScraperUrl] = useState('');
+  const [isScraping, setIsScraping] = useState(false);
+  const [scrapedContent, setScrapedContent] = useState<string>('');
+
   const runAnalysis = async () => {
     if (!prospectName.trim()) {
       setError('Please enter a prospect name');
@@ -196,6 +201,52 @@ export default function Home() {
     }
   };
 
+  const scrapeWebsite = async () => {
+    if (!scraperUrl.trim()) {
+      setError('Please provide a website URL');
+      return;
+    }
+
+    setIsScraping(true);
+    setError(null);
+    setScrapedContent('');
+
+    try {
+      const response = await fetch('/api/scraper/deep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: scraperUrl,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to scrape website');
+      }
+
+      setScrapedContent(data.content);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to scrape website');
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
+  const downloadScrapedContent = () => {
+    const blob = new Blob([scrapedContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const domain = new URL(scraperUrl).hostname.replace('www.', '');
+    a.download = `${domain}-scraped-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Fetch leads when CRM tab is opened
   useEffect(() => {
     if (currentTab === 'crm') {
@@ -263,6 +314,17 @@ export default function Home() {
           >
             <Globe className="w-5 h-5" />
             Generate Demos
+          </button>
+          <button 
+            onClick={() => setCurrentTab('scraper')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+              currentTab === 'scraper' 
+                ? 'bg-indigo-50 text-indigo-700' 
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <FileText className="w-5 h-5" />
+            Website Scraper
           </button>
         </nav>
 
@@ -937,6 +999,89 @@ Let me know what you think.
                   <li>Publicly accessible at dashbabydash.com/demos/client-name/</li>
                   <li>Images can be hosted on Supabase or embedded in HTML</li>
                   <li>Perfect for showing prospects their custom demo sites</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Website Scraper View */}
+          {currentTab === 'scraper' && (
+            <div className="max-w-4xl mx-auto animate-in fade-in duration-300">
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-slate-900">Website Scraper</h1>
+                <p className="text-slate-500 mt-1">Scrape homepage + follow header/footer links (one level deep)</p>
+              </div>
+
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Website URL
+                  </label>
+                  <input
+                    type="url"
+                    value={scraperUrl}
+                    onChange={(e) => setScraperUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Enter the homepage URL to scrape
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                )}
+
+                <button
+                  onClick={scrapeWebsite}
+                  disabled={isScraping || !scraperUrl.trim()}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 disabled:bg-indigo-400 disabled:cursor-not-allowed"
+                >
+                  {isScraping ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Scraping...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-5 h-5" />
+                      Scrape Website
+                    </>
+                  )}
+                </button>
+
+                {scrapedContent && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-slate-700">Scraped Content</h3>
+                      <button
+                        onClick={downloadScrapedContent}
+                        className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+                      >
+                        <FolderOpen className="w-4 h-4" />
+                        Download TXT
+                      </button>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+                      <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono">
+                        {scrapedContent}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                <h3 className="font-semibold text-blue-900 text-sm mb-2">How it works:</h3>
+                <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                  <li>Scrapes the homepage and extracts all text content</li>
+                  <li>Finds header and footer navigation links</li>
+                  <li>Follows internal links (same domain) one level deep</li>
+                  <li>Combines all content into a single TXT file</li>
+                  <li>Perfect for analyzing competitor sites or gathering content</li>
                 </ul>
               </div>
             </div>

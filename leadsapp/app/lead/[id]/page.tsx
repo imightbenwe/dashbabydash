@@ -273,33 +273,6 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       setIsGeneratingMockup(false);
     }
   };
-    setIsGeneratingFollowUp(true);
-    try {
-      const response = await fetch('/api/emails/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          leadId,
-          emailType: 'follow_up_1',
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Follow-up email generated:', data);
-        fetchLeadData(leadId);
-        alert('Follow-up email generated successfully!');
-      } else {
-        const errorData = await response.json();
-        alert(`Failed to generate follow-up: ${errorData.error || 'Unknown error'}`);
-      }
-    } catch (err) {
-      console.error('Failed to generate follow-up:', err);
-      alert('Error generating follow-up email. Check console for details.');
-    } finally {
-      setIsGeneratingFollowUp(false);
-    }
-  };
 
   const copyRawLeadData = () => {
     if (!lead) return;

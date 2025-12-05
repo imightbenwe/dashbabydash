@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { GoogleGenerativeAI } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 
-const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 export async function POST(request: NextRequest) {
   try {
@@ -89,54 +89,107 @@ export async function POST(request: NextRequest) {
 
     console.log('📊 Curated data prepared, sending to Gemini...');
 
-    // 6. Create Gemini prompt
-    const prompt = `You are a world-class web designer specializing in beautiful, modern websites for spiritual coaches, yoga studios, and wellness professionals.
+    // 6. Create Gemini prompt with "Vibe Code" methodology
+    const prompt = `Role:
+You are an award-winning web designer and brand strategist. You specialize in taking raw social media data and transmuting it into high-end, "Vibe Coded" landing pages that feel expensive and deeply resonant.
 
-CREATE A COMPLETE, PRODUCTION-READY HTML WEBSITE based on the following data:
+Objective:
+I will provide you with Instagram data (Profile info, Posts, Captions, Comments) and optional website scraping data.
+You must analyze this data to infer the Brand Identity, Tone of Voice, and Audience Pain Points.
+Then, generate a Single-File HTML "One-Page Site" (using Tailwind CSS) that acts as a "Vision Gift" for this specific creator.
 
-# CLIENT INFORMATION
+# CLIENT DATA
 Name: ${lead.name}
 Company: ${lead.company || 'Not specified'}
 Current Website: ${lead.website || 'None'}
+Instagram: ${lead.instagram ? '@' + lead.instagram.replace('@', '') : 'Not available'}
 
 # INSTAGRAM POSTS (their voice and style)
-${instagramPosts.length > 0 ? JSON.stringify(instagramPosts.slice(0, 10), null, 2) : 'No Instagram data available'}
+${instagramPosts.length > 0 ? JSON.stringify(instagramPosts.slice(0, 15), null, 2) : 'No Instagram data available'}
 
-# AI PERSONALITY ANALYSIS
+# AI PERSONALITY ANALYSIS (Deep insights about their brand)
 ${curatedData.aiAnalysis ? JSON.stringify(curatedData.aiAnalysis, null, 2) : 'No analysis available'}
 
-# CURRENT WEBSITE(S)
+# CURRENT WEBSITE DATA (if available)
 ${scrapedWebsites.length > 0 ? JSON.stringify(curatedData.currentWebsites, null, 2) : 'No current website scraped'}
 
-# YOUR TASK
-Create a COMPLETE, modern, beautiful single-page HTML website that:
+---
 
-1. **Captures their essence** - Use their Instagram voice, personality, and vibe
-2. **Improves on their current site** - If they have one, make it better. If not, create from scratch.
-3. **Professional design** - Modern, clean, spiritual/wellness aesthetic
-4. **Fully functional** - Include Tailwind CSS, smooth scrolling, animations
-5. **Conversion-focused** - Clear CTAs, contact section, booking links
+Step 1: Analyze the Data (Do this internally)
+1. Identify the Creator: Extract the First Name from the name field.
+2. Identify the Niche: Analyze the Instagram captions and AI analysis. (e.g., "Manifestation", "Trauma Healing", "Business Coaching").
+3. Identify the Vibe: Look at the emojis used 🌿✨🦋 and the tone (Gentle? Fiery? Academic?).
+4. Color Palette: Infer a 4-color palette based on this vibe. (e.g., Earthy = Sage/Sand; Bold = Black/Electric Blue).
+5. Extract the Hook: Read the Instagram captions. Find a specific story about a struggle or realization. Use this for the copy.
+6. Extract Social Proof: Read the Instagram post captions and use them to craft testimonials that show deep resonance.
+7. Identify Existing Offers (CRITICAL):
+   - Scan captions and AI analysis for keywords: "Masterclass", "1:1", "Course", "Waitlist", "Program", "Retreat", "Book Now", "Session".
+   - Extract the exact name of their current offer if found (e.g., "The Alignment Academy").
 
-REQUIREMENTS:
-- Use Tailwind CSS (CDN)
-- Include FontAwesome icons
+Step 2: Design Constraints (The "Vibe Code")
+- Tech Stack: Single HTML file. Tailwind CSS via CDN. FontAwesome/HeroIcons via CDN.
+- Navigation: Create a sticky "Glassmorphism" Navigation Bar with links: Home, About, [Offer Name], Contact.
+- Typography: Google Fonts. Choose a pairing that matches the niche (e.g., 'Playfair Display' for spiritual, 'Montserrat' for business).
+- Images:
+  * DO NOT use Instagram post images as backgrounds (they are often vertical/low-res).
+  * Use high-quality Pexels URLs with keywords matching the Niche (e.g., https://images.pexels.com/photos/[id]/pexels-photo-[id].jpeg).
+  * Choose Pexels images that match: meditation, yoga, nature, wellness, spirituality, healing, etc.
+
+Step 3: The Content Structure (HTML Output)
+Build the page with these specific sections in order:
+
+1. **Hero Section:**
+   - Headline: A magnetic statement derived from their Niche (e.g., "Manifestation without the Panic").
+   - Subheadline: "A digital sanctuary for [Target Audience] ready to [Desired Outcome]."
+   - Call to Action: "Explore the Container" or similar spiritual/wellness CTA.
+
+2. **The "Resonance" Section (The Hook):**
+   - Use the "Struggle" analysis from Instagram captions.
+   - "You've been feeling [Pain Point from Captions]..."
+   - Validate their feelings based on the community engagement.
+
+3. **About the Guide:**
+   - Write a bio based on the "Story Arc" found in the captions.
+   - "Hi, I'm [Name]. I help [Audience] move from [Struggle] to [Transformation]."
+
+4. **The "Vision" Offer (Extract First, Refine Second):**
+   - Priority A (Extract): If you found an existing offer in Step 1, highlight it. Use their exact language but elevate the presentation.
+   - Priority B (Refine): If they mention "sessions" or vague offerings, package it attractively (e.g., "Private 1:1 Mentorship").
+   - Priority C (Invent): ONLY if the data is completely void of any sales intent, create a placeholder "Signature Offer" relevant to their niche.
+
+5. **Social Proof Cards:**
+   - Create 3 elegant cards using insights from the Instagram engagement data.
+   - Make them feel authentic and resonant (e.g., "This changed everything for me").
+
+6. **Contact / Booking Section:**
+   - A clean, inviting footer area inviting them to "Step into the Portal" or "Book a Discovery Call."
+   - Include a contact form or CTA button.
+
+7. **Footer:**
+   - Simple, clean, with a "Built with Intention for ${lead.name}" tag.
+
+TECHNICAL REQUIREMENTS:
+- Use Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
+- Use FontAwesome icons via CDN
 - Add smooth scroll behavior
-- Use beautiful color palette (earth tones, calming colors)
-- Include sections: Hero, About, Services/Offerings, Testimonials (make up 2-3 realistic ones), Contact
-- Make it mobile responsive
+- Mobile responsive (mobile-first design)
 - Use Google Fonts (serif for headings, sans-serif for body)
-- Add subtle animations and transitions
-- Include a navigation bar
-- Make images use placeholder URLs from Pexels (yoga, meditation, nature themes)
+- Add subtle animations and transitions (use Tailwind's transition classes)
+- Glassmorphism effects for nav bar (backdrop-blur, bg-opacity)
+- Modern gradient backgrounds
+- Professional color palette that matches their vibe
 
 OUTPUT:
-Return ONLY the complete HTML code, starting with <!DOCTYPE html>. No explanations, no markdown code blocks, just pure HTML.`;
+Return ONLY the complete, runnable HTML code starting with <!DOCTYPE html>. 
+No explanations, no markdown code blocks, no commentary - just pure HTML that can be saved and opened in a browser immediately.`;
 
     // 7. Call Gemini
-    const model = genai.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-    const result = await model.generateContent(prompt);
+    const result = await genai.models.generateContent({
+      model: 'gemini-2.0-flash-exp',
+      contents: prompt,
+    });
 
-    const generatedHtml = result.response.text();
+    const generatedHtml = result.text;
 
     // 8. Clean up the response (remove markdown code blocks if any)
     let cleanHtml = generatedHtml;

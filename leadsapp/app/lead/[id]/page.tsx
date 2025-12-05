@@ -38,6 +38,12 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const [editedPdfUrl, setEditedPdfUrl] = useState('');
   const [editedMockupSiteUrl, setEditedMockupSiteUrl] = useState('');
   const [isGeneratingFollowUp, setIsGeneratingFollowUp] = useState(false);
+  
+  // Website mockup generator state
+  const [showMockupModal, setShowMockupModal] = useState(false);
+  const [mockupWebsiteUrls, setMockupWebsiteUrls] = useState('');
+  const [isGeneratingMockup, setIsGeneratingMockup] = useState(false);
+  const [mockupResult, setMockupResult] = useState<any>(null);
 
   useEffect(() => {
     params.then(p => {
@@ -192,6 +198,81 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   };
 
   const generateFollowUpEmail = async () => {
+    setIsGeneratingFollowUp(true);
+    try {
+      const response = await fetch('/api/emails/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId,
+          emailType: 'follow-up',
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Follow-up email generated:', data);
+        fetchLeadData(leadId);
+        alert('Follow-up email generated successfully!');
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to generate follow-up email: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Failed to generate follow-up email:', err);
+      alert('Error generating follow-up email. Check console for details.');
+    } finally {
+      setIsGeneratingFollowUp(false);
+    }
+  };
+
+  const generateWebsiteMockup = async () => {
+    if (!mockupWebsiteUrls.trim() && !editedWebsite) {
+      alert('Please provide at least one website URL');
+      return;
+    }
+
+    setIsGeneratingMockup(true);
+    setMockupResult(null);
+
+    try {
+      // Parse URLs (can be comma or newline separated)
+      const urls = mockupWebsiteUrls
+        .split(/[,\n]/)
+        .map(url => url.trim())
+        .filter(url => url.length > 0);
+
+      // Add the lead's website if no URLs provided
+      if (urls.length === 0 && editedWebsite) {
+        urls.push(editedWebsite);
+      }
+
+      console.log(`🎨 Generating mockup with URLs:`, urls);
+
+      const response = await fetch('/api/mockup/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId,
+          websiteUrls: urls,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMockupResult(data);
+        alert(`✅ Website mockup generated!\n\n${data.message}`);
+      } else {
+        throw new Error(data.error || 'Failed to generate mockup');
+      }
+    } catch (err) {
+      console.error('Failed to generate mockup:', err);
+      alert(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsGeneratingMockup(false);
+    }
+  };
     setIsGeneratingFollowUp(true);
     try {
       const response = await fetch('/api/emails/generate', {
@@ -357,6 +438,12 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowMockupModal(true)}
+              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg flex items-center gap-2"
+            >
+              <Globe className="w-4 h-4" /> Generate Website Mockup
+            </button>
             <button
               onClick={copyRawLeadData}
               className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center gap-2"
@@ -1136,6 +1223,114 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
           </div>
         )}
       </div>
+
+      {/* Website Mockup Generator Modal */}
+      {showMockupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Globe className="w-6 h-6 text-purple-600" />
+                  Generate Website Mockup
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  AI will scrape their website(s) and create a beautiful new mockup
+                </p>
+              </div>
+              <button
+                onClick={() => setShowMockupModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {mockupResult && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="text-green-600 text-2xl">✅</div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-green-900">Mockup Generated!</p>
+                      <p className="text-sm text-green-700 mt-1">{mockupResult.message}</p>
+                      <div className="mt-3 space-y-2">
+                        <a
+                          href={mockupResult.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-mono text-green-800 hover:text-green-900 underline block"
+                        >
+                          {mockupResult.url}
+                        </a>
+                        <p className="text-xs text-green-600">
+                          Local file: {mockupResult.filePath}
+                        </p>
+                        <p className="text-xs text-green-600 font-semibold">
+                          Remember to commit and push to make it live!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Website URLs to scrape
+                </label>
+                <textarea
+                  value={mockupWebsiteUrls}
+                  onChange={(e) => setMockupWebsiteUrls(e.target.value)}
+                  placeholder={`Enter website URLs (one per line or comma-separated)\n\nExample:\nhttps://example.com\nhttps://example.com/about\n\nLeave empty to use lead's website: ${editedWebsite || 'None set'}`}
+                  rows={6}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  The AI will analyze these pages along with the lead's Instagram data and AI analysis to generate a custom mockup.
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 text-sm mb-2">How it works:</h3>
+                <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                  <li>Scrapes the provided website(s) for content and structure</li>
+                  <li>Fetches lead's Instagram posts and AI personality analysis</li>
+                  <li>Sends curated data to Gemini AI</li>
+                  <li>Generates a complete, beautiful HTML website mockup</li>
+                  <li>Saves to /demos/{lead?.name?.toLowerCase().replace(/[^a-z0-9-]/g, '-')}/</li>
+                </ul>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={generateWebsiteMockup}
+                  disabled={isGeneratingMockup}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium shadow-lg shadow-purple-200 transition-all flex items-center justify-center gap-2 disabled:bg-purple-400 disabled:cursor-not-allowed"
+                >
+                  {isGeneratingMockup ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Generating... (this may take 30-60 seconds)
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      Generate Mockup with AI
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowMockupModal(false)}
+                  className="px-6 py-3 text-slate-600 hover:text-slate-900 font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

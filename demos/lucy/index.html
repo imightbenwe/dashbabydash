@@ -1,476 +1,628 @@
-import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Calendar, MapPin, Menu, X, ArrowRight, Star, Heart, Instagram, Mail, Wind, Droplet, Sparkles } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inner States | Yoga, Meditation & Ritual</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Icons (Phosphor) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-/* High-end Design System:
-  - Font Headings: Playfair Display (Serif) - Simulated via font-serif
-  - Font Body: Lato/Montserrat (Sans) - Simulated via font-sans
-  - Colors: 
-    - Cream/Bone (Backgrounds): #F9F7F2
-    - Deep Brown/Charcoal (Text): #4A4036
-    - Sage Green (Accents): #8FA38F
-    - Terracotta/Clay (Highlights): #C27E68
-    - Gold (Subtle): #D4C4A8
-*/
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Lato', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        cream: '#F9F7F2',
+                        charcoal: '#4A4036',
+                        sage: '#8FA38F',
+                        terra: '#C27E68',
+                        gold: '#D4C4A8',
+                    }
+                }
+            }
+        }
+    </script>
 
-const App = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('retreats');
+    <style>
+        /* Custom Utilities */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Fade In Animation */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 1s ease-out forwards;
+        }
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+        /* Tab Transition */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .tab-content.active {
+            display: grid;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-cream text-charcoal font-sans antialiased selection:bg-terra selection:text-white">
 
-  const navLinks = [
-    { name: 'Retreats', href: '#retreats' },
-    { name: 'Training', href: '#training' },
-    { name: 'Shop', href: '#shop' },
-    { name: 'Classes', href: '#schedule' },
-    { name: 'About', href: '#about' },
-  ];
-
-  // REAL DATA: Based on Instagram & Website Scrape for products
-  const products = [
-    {
-      id: 1,
-      name: "Inner States Incense Kit",
-      price: "$100.00",
-      image: "https://images.unsplash.com/photo-1602166687023-c40d21652171?q=80&w=1000&auto=format&fit=crop",
-      badge: "Best Seller",
-      desc: "Create your own low-tox ritual tools. Includes Yin & Meditate blends. Makes 6x workshop amount."
-    },
-    {
-      id: 2,
-      name: "Yin Skin Oil + Roller",
-      price: "$65.00",
-      image: "https://images.unsplash.com/photo-1608248597279-f99d160bfbc8?q=80&w=1000&auto=format&fit=crop",
-      badge: "Restocked",
-      desc: "A grounding hug in a bottle. Cedarwood, Geranium, and Ylang Ylang."
-    },
-    {
-      id: 3,
-      name: "Flow Drops",
-      price: "$55.00",
-      image: "https://images.unsplash.com/photo-1615486511484-92e172cc416d?q=80&w=1000&auto=format&fit=crop",
-      desc: "For creativity and expression. Bright rose, cardamom, and mandarin."
-    },
-    {
-      id: 4,
-      name: "Space Mist Trio",
-      price: "$85.00",
-      image: "https://images.unsplash.com/photo-1596435661601-52264c676774?q=80&w=1000&auto=format&fit=crop",
-      desc: "Clearing, grounding, and uplifting mists for your sacred space."
-    }
-  ];
-
-  // REAL DATA: 2026 Retreat Schedule from website scrape
-  const retreats = [
-    {
-      title: "Bali Sangha 2026",
-      subtitle: "Yoga + Meditation Immersion",
-      date: "Sept 19 - Sept 26, 2026",
-      location: "Komune Keramas, Bali",
-      image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1000&auto=format&fit=crop",
-      desc: "7 nights at Komune Resort. Vinyasa, Yin, Breathwork, and Water Purification. With Steve Ross.",
-      price: "From $3,100 (Early Bird)"
-    },
-    {
-      title: "Women's Rest Retreat",
-      subtitle: "Gather & Rest",
-      date: "March 13 - 16, 2026",
-      location: "The Old Church, Red Hill",
-      image: "https://images.unsplash.com/photo-1545389336-cf090694435e?q=80&w=1000&auto=format&fit=crop",
-      desc: "Pause the doing. Simply be held. Sound Healing, Yin, Nourishing Food by Ash. Private & Twin Share.",
-      price: "From $1,899"
-    },
-    {
-      title: "Otways Immersion",
-      subtitle: "Meditation & Yoga",
-      date: "Sept 3 - 7, 2026",
-      location: "King Parrot Cottages",
-      image: "https://images.unsplash.com/photo-1445019980597-93fa8acb7464?q=80&w=1000&auto=format&fit=crop",
-      desc: "A deep dive into practice with a light heart. Ecstatic movement, Qi Gong, and fireside chats.",
-      price: "From $1,799"
-    }
-  ];
-
-  // Dynamic Navigation Styles
-  const navTextColor = isScrolled ? 'text-[#4A4036]' : 'text-[#F9F7F2]';
-  const navBgColor = isScrolled ? 'bg-[#F9F7F2]/95 backdrop-blur-md py-4 shadow-sm' : 'bg-transparent py-6';
-  const navButtonClass = isScrolled 
-    ? 'bg-[#4A4036] text-[#F9F7F2] hover:bg-[#C27E68]' 
-    : 'bg-[#F9F7F2] text-[#4A4036] hover:bg-[#C27E68] hover:text-white';
-
-  return (
-    <div className="font-sans text-[#4A4036] bg-[#F9F7F2] selection:bg-[#C27E68] selection:text-white">
-      
-      {/* Navigation */}
-      <nav className={`fixed w-full z-50 transition-all duration-500 ${navBgColor}`}>
-        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-          <a href="#" className={`font-serif text-2xl tracking-widest uppercase font-bold transition-colors duration-500 ${navTextColor}`}>
-            Inner States
-          </a>
-          
-          {/* Desktop Nav */}
-          <div className={`hidden md:flex items-center space-x-10 text-sm tracking-wide uppercase font-medium transition-colors duration-500 ${navTextColor}`}>
-            {navLinks.map((link) => (
-              <a key={link.name} href={link.href} className="hover:text-[#C27E68] transition-colors relative group">
-                {link.name}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#C27E68] transition-all group-hover:w-full"></span>
-              </a>
-            ))}
-            <button className={`px-6 py-2.5 rounded-full transition-all duration-300 ${navButtonClass}`}>
-              Book Class
-            </button>
-          </div>
-
-          {/* Mobile Toggle */}
-          <button className={`md:hidden ${navTextColor}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 bg-[#F9F7F2] z-40 flex flex-col items-center justify-center space-y-8 text-2xl font-serif text-[#4A4036]">
-          {navLinks.map((link) => (
-            <a key={link.name} href={link.href} onClick={() => setMobileMenuOpen(false)} className="hover:text-[#C27E68]">
-              {link.name}
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed w-full z-50 transition-all duration-500 py-6 bg-transparent text-cream">
+        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
+            <!-- Logo -->
+            <a href="#" class="font-serif text-2xl tracking-widest uppercase font-bold transition-colors duration-300">
+                Inner States
             </a>
-          ))}
-        </div>
-      )}
 
-      {/* Hero Section */}
-      <header className="relative h-screen flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?q=80&w=2525&auto=format&fit=crop" 
-            alt="Calm Ocean" 
-            className="w-full h-full object-cover opacity-90"
-          />
-          <div className="absolute inset-0 bg-black/20 mix-blend-overlay"></div>
+            <!-- Desktop Links -->
+            <div class="hidden md:flex items-center space-x-10 text-sm tracking-wide uppercase font-medium">
+                <a href="#retreats" class="hover:text-terra transition-colors relative group">
+                    Retreats
+                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-terra transition-all group-hover:w-full"></span>
+                </a>
+                <a href="#training" class="hover:text-terra transition-colors relative group">
+                    Training
+                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-terra transition-all group-hover:w-full"></span>
+                </a>
+                <a href="#shop" class="hover:text-terra transition-colors relative group">
+                    Shop
+                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-terra transition-all group-hover:w-full"></span>
+                </a>
+                <a href="#schedule" class="hover:text-terra transition-colors relative group">
+                    Classes
+                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-terra transition-all group-hover:w-full"></span>
+                </a>
+                <a href="#about" class="hover:text-terra transition-colors relative group">
+                    About
+                    <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-terra transition-all group-hover:w-full"></span>
+                </a>
+                
+                <button id="nav-btn" class="bg-cream text-charcoal px-6 py-2.5 rounded-full hover:bg-terra hover:text-white transition-all duration-300 shadow-lg">
+                    Book Class
+                </button>
+            </div>
+
+            <!-- Mobile Toggle -->
+            <button id="mobile-menu-btn" class="md:hidden text-2xl focus:outline-none">
+                <i class="ph ph-list"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="fixed inset-0 bg-cream z-40 flex-col items-center justify-center space-y-8 text-2xl font-serif text-charcoal hidden opacity-0 transition-opacity duration-300">
+        <button id="close-menu-btn" class="absolute top-6 right-6 text-3xl text-charcoal">
+            <i class="ph ph-x"></i>
+        </button>
+        <a href="#retreats" class="hover:text-terra mobile-link">Retreats</a>
+        <a href="#training" class="hover:text-terra mobile-link">Training</a>
+        <a href="#shop" class="hover:text-terra mobile-link">Shop</a>
+        <a href="#schedule" class="hover:text-terra mobile-link">Classes</a>
+        <a href="#about" class="hover:text-terra mobile-link">About</a>
+    </div>
+
+    <!-- Hero Section -->
+    <header class="relative h-screen flex items-center justify-center overflow-hidden">
+        <!-- Background Image -->
+        <div class="absolute inset-0 z-0">
+            <img src="https://images.pexels.com/photos/414612/pexels-photo-414612.jpeg?auto=compress&cs=tinysrgb&w=2000" 
+                 alt="Calm Ocean" 
+                 class="w-full h-full object-cover opacity-90">
+            <div class="absolute inset-0 bg-black/30 mix-blend-overlay"></div>
         </div>
         
-        <div className="relative z-10 text-center text-white px-4 animate-fade-in-up">
-          <p className="font-sans text-sm md:text-base tracking-[0.3em] uppercase mb-4 opacity-90">
-            Yoga • Meditation • Ritual
-          </p>
-          <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl mb-6 leading-tight">
-            Come Home <br/> To Yourself
-          </h1>
-          <p className="max-w-xl mx-auto text-lg md:text-xl font-light opacity-90 mb-10 leading-relaxed">
-            "Spirituality begins with joy. Let the practice unravel you, soften you, and bring you back to your rhythm."
-          </p>
-          <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <button className="bg-[#F9F7F2] text-[#4A4036] px-8 py-3.5 rounded-full hover:bg-[#C27E68] hover:text-white transition-all duration-300 min-w-[180px]">
-              Explore Retreats
-            </button>
-            <button className="border border-[#F9F7F2] text-[#F9F7F2] px-8 py-3.5 rounded-full hover:bg-[#F9F7F2] hover:text-[#4A4036] transition-all duration-300 min-w-[180px]">
-              Shop Rituals
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Intro / Philosophy - Updated Bio with REAL Text */}
-      <section id="about" className="py-24 md:py-32 px-6">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
-          <div className="relative">
-            <div className="absolute -top-4 -left-4 w-full h-full border border-[#C27E68] rounded-tr-[4rem]"></div>
-            <img 
-              src="https://images.unsplash.com/photo-1544367563-12123d8965cd?q=80&w=1000&auto=format&fit=crop" 
-              alt="Luce - Founder" 
-              className="w-full h-[600px] object-cover rounded-tr-[4rem] relative z-10 grayscale hover:grayscale-0 transition-all duration-700"
-            />
-          </div>
-          <div>
-            <h4 className="text-[#C27E68] uppercase tracking-widest text-sm font-bold mb-4">The Founder</h4>
-            <h2 className="font-serif text-4xl md:text-5xl mb-8 leading-tight">Hi, I'm Luce.</h2>
-            <div className="space-y-6 text-lg font-light leading-relaxed opacity-80">
-              <p>
-                In my early twenties, I discovered yoga and fell in love with the mind-body connection it brought. It opened me up to deeper questions: What does it mean to live a good life?
-              </p>
-              <p>
-                 I became a health coach and a yoga teacher, and in 2020, Inner States was born. Life has shown me that things don't always go as planned, but having trusted tools—especially when you're stressed or feeling flat—makes all the difference.
-              </p>
-              <p>
-                As for me? My essentials are yoga, a steady routine, beach walks, time with family, pizza, and laughing often.
-              </p>
+        <!-- Content -->
+        <div class="relative z-10 text-center text-white px-4 animate-fade-in-up mt-20">
+            <p class="font-sans text-xs md:text-sm tracking-[0.3em] uppercase mb-6 opacity-90">
+                Yoga • Meditation • Ritual
+            </p>
+            <h1 class="font-serif text-5xl md:text-7xl lg:text-8xl mb-8 leading-tight drop-shadow-sm">
+                Come Home <br/> To Yourself
+            </h1>
+            <p class="max-w-xl mx-auto text-lg md:text-xl font-light opacity-95 mb-12 leading-relaxed drop-shadow-sm">
+                "Spirituality begins with joy. Let the practice unravel you, soften you, and bring you back to your rhythm."
+            </p>
+            <div class="flex flex-col md:flex-row gap-4 justify-center">
+                <a href="#retreats" class="bg-cream text-charcoal px-8 py-3.5 rounded-full hover:bg-terra hover:text-white transition-all duration-300 min-w-[180px] shadow-lg font-medium">
+                    Explore Retreats
+                </a>
+                <a href="#shop" class="border border-cream text-cream px-8 py-3.5 rounded-full hover:bg-cream hover:text-charcoal transition-all duration-300 min-w-[180px] font-medium backdrop-blur-sm">
+                    Shop Rituals
+                </a>
             </div>
-            <div className="mt-10">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Signature_sample.svg/1200px-Signature_sample.svg.png" alt="Signature" className="h-12 opacity-50" />
-            </div>
-          </div>
         </div>
-      </section>
+    </header>
 
-      {/* Offerings Tabs (Retreats, Training, Workshops) */}
-      <section id="retreats" className="bg-white py-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="font-serif text-4xl md:text-5xl mb-4 text-[#4A4036]">Gather & Grow</h2>
-            <p className="opacity-60 uppercase tracking-widest text-sm">Upcoming Experiences</p>
-          </div>
-
-          <div className="flex justify-center mb-12 space-x-8 border-b border-gray-100 pb-4">
-            {['retreats', 'training'].map((tab) => (
-              <button 
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`text-lg uppercase tracking-wider pb-4 transition-all ${activeTab === tab ? 'text-[#C27E68] border-b-2 border-[#C27E68]' : 'text-gray-400 hover:text-[#4A4036]'}`}
-              >
-                {tab === 'retreats' ? 'Retreats' : 'Teacher Training'}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {activeTab === 'retreats' ? retreats.map((item, idx) => (
-              <div key={idx} className="group cursor-pointer">
-                <div className="overflow-hidden rounded-t-2xl relative h-80 mb-6">
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all duration-500 z-10"></div>
-                  <img src={item.image} alt={item.title} className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded text-xs uppercase tracking-wide font-bold">
-                    {item.location}
-                  </div>
+    <!-- Intro / About Section -->
+    <section id="about" class="py-24 md:py-32 px-6 bg-cream">
+        <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+            <!-- Image Frame -->
+            <div class="relative group">
+                <div class="absolute -top-4 -left-4 w-full h-full border border-terra rounded-tr-[4rem] transition-transform duration-500 group-hover:translate-x-2 group-hover:translate-y-2"></div>
+                <img src="https://images.pexels.com/photos/3822621/pexels-photo-3822621.jpeg?auto=compress&cs=tinysrgb&w=1200" 
+                     alt="Luce - Founder" 
+                     class="w-full h-[500px] md:h-[600px] object-cover rounded-tr-[4rem] relative z-10 grayscale hover:grayscale-0 transition-all duration-700 shadow-xl">
+            </div>
+            
+            <!-- Text -->
+            <div class="md:pl-10">
+                <h4 class="text-terra uppercase tracking-widest text-sm font-bold mb-4">The Founder</h4>
+                <h2 class="font-serif text-4xl md:text-5xl mb-8 leading-tight text-charcoal">Hi, I'm Luce.</h2>
+                <div class="space-y-6 text-lg font-light leading-relaxed text-charcoal/80">
+                    <p>
+                        In my early twenties, I discovered yoga and fell in love with the mind-body connection it brought. It opened me up to deeper questions: What does it mean to live a good life?
+                    </p>
+                    <p>
+                        I became a health coach and a yoga teacher, and in 2020, Inner States was born. Life has shown me that things don't always go as planned, but having trusted tools—especially when you're stressed or feeling flat—makes all the difference.
+                    </p>
+                    <p>
+                        As for me? My essentials are yoga, a steady routine, beach walks, time with family, pizza, and laughing often.
+                    </p>
                 </div>
-                <div className="pr-4">
-                  <div className="flex justify-between items-baseline mb-2">
-                    <p className="text-[#C27E68] text-sm font-bold uppercase tracking-wider">{item.date}</p>
-                    <p className="text-gray-400 text-xs uppercase tracking-widest">{item.price}</p>
-                  </div>
-                  <h3 className="font-serif text-2xl mb-3 group-hover:text-[#C27E68] transition-colors">{item.title}</h3>
-                  <p className="text-gray-600 font-light mb-4 line-clamp-2">{item.desc}</p>
-                  <div className="flex items-center text-sm font-bold uppercase tracking-widest group-hover:translate-x-2 transition-transform">
-                    View Details <ArrowRight size={16} className="ml-2" />
-                  </div>
+                <div class="mt-10">
+                    <!-- Signature Placeholder -->
+                    <span class="font-serif text-3xl italic text-terra/60">Luce x</span>
                 </div>
-              </div>
-            )) : (
-              // Teacher Training Card (Expanded View with REAL Data)
-              <div className="col-span-3 bg-[#F4F1EC] rounded-3xl overflow-hidden flex flex-col md:flex-row">
-                 <div className="md:w-1/2 h-96 md:h-auto relative">
-                    <img src="https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?q=80&w=1000&auto=format&fit=crop" className="w-full h-full object-cover" alt="Yin Training"/>
+            </div>
+        </div>
+    </section>
+
+    <!-- Retreats & Training (Tabs) -->
+    <section id="retreats" class="bg-white py-24 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="font-serif text-4xl md:text-5xl mb-4 text-charcoal">Gather & Grow</h2>
+                <p class="opacity-60 uppercase tracking-widest text-sm text-charcoal">Upcoming Experiences</p>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="flex justify-center mb-12 space-x-12 border-b border-gray-100 pb-4">
+                <button onclick="switchTab('retreats')" id="tab-btn-retreats" class="text-lg uppercase tracking-wider pb-4 transition-all text-terra border-b-2 border-terra">
+                    Retreats
+                </button>
+                <button onclick="switchTab('training')" id="tab-btn-training" class="text-lg uppercase tracking-wider pb-4 transition-all text-gray-400 hover:text-charcoal border-b-2 border-transparent">
+                    Teacher Training
+                </button>
+            </div>
+
+            <!-- Retreats Content -->
+            <div id="tab-content-retreats" class="tab-content active grid md:grid-cols-3 gap-8">
+                
+                <!-- Retreat Card 1 -->
+                <div class="group cursor-pointer">
+                    <div class="overflow-hidden rounded-t-2xl relative h-80 mb-6">
+                        <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all duration-500 z-10"></div>
+                        <img src="https://images.pexels.com/photos/1051838/pexels-photo-1051838.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Bali" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700">
+                        <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded text-xs uppercase tracking-wide font-bold text-charcoal shadow-sm">
+                            Bali
+                        </div>
+                    </div>
+                    <div class="pr-4">
+                        <div class="flex justify-between items-baseline mb-2">
+                            <p class="text-terra text-sm font-bold uppercase tracking-wider">Sept 19 - 26, 2026</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest">From $3,100</p>
+                        </div>
+                        <h3 class="font-serif text-2xl mb-3 text-charcoal group-hover:text-terra transition-colors">Bali Sangha Immersion</h3>
+                        <p class="text-gray-600 font-light mb-4 line-clamp-2">7 nights at Komune Resort. Vinyasa, Yin, Breathwork, and Water Purification. With Steve Ross.</p>
+                        <div class="flex items-center text-sm font-bold uppercase tracking-widest text-charcoal group-hover:translate-x-2 transition-transform">
+                            View Details <i class="ph ph-arrow-right ml-2 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Retreat Card 2 -->
+                <div class="group cursor-pointer">
+                    <div class="overflow-hidden rounded-t-2xl relative h-80 mb-6">
+                        <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all duration-500 z-10"></div>
+                        <img src="https://images.pexels.com/photos/3822621/pexels-photo-3822621.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Red Hill" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700">
+                        <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded text-xs uppercase tracking-wide font-bold text-charcoal shadow-sm">
+                            Mornington Peninsula
+                        </div>
+                    </div>
+                    <div class="pr-4">
+                        <div class="flex justify-between items-baseline mb-2">
+                            <p class="text-terra text-sm font-bold uppercase tracking-wider">Mar 13 - 16, 2026</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest">From $1,899</p>
+                        </div>
+                        <h3 class="font-serif text-2xl mb-3 text-charcoal group-hover:text-terra transition-colors">Women's Rest Retreat</h3>
+                        <p class="text-gray-600 font-light mb-4 line-clamp-2">Pause the doing. Simply be held. Sound Healing, Yin, Nourishing Food by Ash. Private & Twin Share.</p>
+                        <div class="flex items-center text-sm font-bold uppercase tracking-widest text-charcoal group-hover:translate-x-2 transition-transform">
+                            View Details <i class="ph ph-arrow-right ml-2 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Retreat Card 3 -->
+                <div class="group cursor-pointer">
+                    <div class="overflow-hidden rounded-t-2xl relative h-80 mb-6">
+                        <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-all duration-500 z-10"></div>
+                        <img src="https://images.pexels.com/photos/4056723/pexels-photo-4056723.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Otways" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700">
+                        <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded text-xs uppercase tracking-wide font-bold text-charcoal shadow-sm">
+                            Otways
+                        </div>
+                    </div>
+                    <div class="pr-4">
+                        <div class="flex justify-between items-baseline mb-2">
+                            <p class="text-terra text-sm font-bold uppercase tracking-wider">Sept 3 - 7, 2026</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest">From $1,799</p>
+                        </div>
+                        <h3 class="font-serif text-2xl mb-3 text-charcoal group-hover:text-terra transition-colors">Meditation Immersion</h3>
+                        <p class="text-gray-600 font-light mb-4 line-clamp-2">A deep dive into practice with a light heart. Ecstatic movement, Qi Gong, and fireside chats.</p>
+                        <div class="flex items-center text-sm font-bold uppercase tracking-widest text-charcoal group-hover:translate-x-2 transition-transform">
+                            View Details <i class="ph ph-arrow-right ml-2 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Training Content (Hidden by default) -->
+            <div id="tab-content-training" class="tab-content col-span-3 bg-[#F4F1EC] rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-lg">
+                 <div id="training" class="md:w-1/2 h-96 md:h-auto relative">
+                    <img src="https://images.pexels.com/photos/3822906/pexels-photo-3822906.jpeg?auto=compress&cs=tinysrgb&w=1200" class="w-full h-full object-cover" alt="Yin Training">
                  </div>
-                 <div className="md:w-1/2 p-12 flex flex-col justify-center">
-                    <div className="inline-block bg-[#C27E68] text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider w-fit mb-6">
+                 <div class="md:w-1/2 p-12 flex flex-col justify-center">
+                    <div class="inline-block bg-terra text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider w-fit mb-6">
                       Feb 13 - Mar 1, 2026
                     </div>
-                    <h3 className="font-serif text-4xl mb-6">35hr Yin Teacher Training</h3>
-                    <p className="text-[#4A4036] font-bold mb-2">Location: Point Leo Retreat</p>
-                    <p className="text-lg text-gray-600 font-light mb-8 leading-relaxed">
+                    <h3 class="font-serif text-4xl mb-4 text-charcoal">35hr Yin Teacher Training</h3>
+                    <p class="text-charcoal font-bold mb-2 uppercase tracking-wide text-sm">Location: Point Leo Retreat</p>
+                    <p class="text-lg text-gray-600 font-light mb-8 leading-relaxed">
                       Deepen your understanding of Yin Yoga, TCM, and stillness. Led by Lucy Jarvis & Dr. Rebecca Jade. Perfect for students and teachers alike. Includes Asana labs, functional anatomy, and space holding skills.
                     </p>
-                    <div className="flex items-center gap-4">
-                        <button className="bg-[#4A4036] text-white px-8 py-4 rounded-full w-fit hover:bg-[#C27E68] transition-colors">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        <button class="bg-charcoal text-white px-8 py-4 rounded-full w-fit hover:bg-terra transition-colors shadow-lg">
                           Apply Now ($1,199 Early Bird)
                         </button>
-                        <span className="text-xs text-gray-500">Deposit: $300</span>
+                        <span class="text-sm text-gray-500 font-medium">Deposit: $300</span>
                     </div>
                  </div>
-              </div>
-            )}
-          </div>
+            </div>
+
         </div>
-      </section>
+    </section>
 
-      {/* Shop Preview */}
-      <section id="shop" className="py-24 px-6 bg-[#8FA38F]/10">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-12">
-            <div>
-              <h2 className="font-serif text-4xl mb-2 text-[#4A4036]">Rituals for Home</h2>
-              <p className="text-gray-600 font-light">Hand-blended potions, incense, and tools.</p>
+    <!-- Shop Section -->
+    <section id="shop" class="py-24 px-6 bg-[#8FA38F]/10 relative">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-12">
+                <div>
+                    <h2 class="font-serif text-4xl mb-2 text-charcoal">Rituals for Home</h2>
+                    <p class="text-gray-600 font-light">Hand-blended potions, incense, and tools.</p>
+                </div>
+                <a href="#" class="hidden md:flex items-center text-terra font-bold uppercase tracking-widest hover:opacity-80 mt-4 md:mt-0 transition-opacity">
+                    Shop All <i class="ph ph-arrow-right ml-2 text-lg"></i>
+                </a>
             </div>
-            <a href="#" className="hidden md:flex items-center text-[#C27E68] font-bold uppercase tracking-widest hover:opacity-80 mt-4 md:mt-0">
-              Shop All <ArrowRight size={18} className="ml-2" />
-            </a>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {products.map((product) => (
-              <div key={product.id} className="bg-white p-4 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group">
-                <div className="relative h-64 bg-[#F9F7F2] rounded-lg mb-4 overflow-hidden">
-                  {product.badge && (
-                    <span className="absolute top-2 left-2 bg-[#4A4036] text-white text-[10px] px-2 py-1 uppercase tracking-widest">
-                      {product.badge}
-                    </span>
-                  )}
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <button className="absolute bottom-4 right-4 bg-white p-3 rounded-full shadow-md translate-y-12 group-hover:translate-y-0 transition-transform duration-300 text-[#4A4036] hover:bg-[#C27E68] hover:text-white">
-                    <ShoppingBag size={18} />
-                  </button>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                
+                <!-- Product 1 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group">
+                    <div class="relative h-64 bg-cream rounded-lg mb-4 overflow-hidden">
+                        <span class="absolute top-2 left-2 bg-charcoal text-white text-[10px] px-2 py-1 uppercase tracking-widest z-10">Best Seller</span>
+                        <img src="https://images.pexels.com/photos/6802045/pexels-photo-6802045.jpeg?auto=compress&cs=tinysrgb&w=1000" alt="Incense" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <button class="absolute bottom-4 right-4 bg-white p-3 rounded-full shadow-md translate-y-12 group-hover:translate-y-0 transition-transform duration-300 text-charcoal hover:bg-terra hover:text-white">
+                            <i class="ph ph-bag text-lg"></i>
+                        </button>
+                    </div>
+                    <h3 class="font-serif text-lg mb-1 text-charcoal">Inner States Incense Kit</h3>
+                    <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Create your ritual</p>
+                    <span class="font-bold text-charcoal">$100.00</span>
                 </div>
-                <h3 className="font-serif text-lg mb-1">{product.name}</h3>
-                <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">Inner States</p>
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-[#4A4036]">{product.price}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="mt-12 text-center md:hidden">
-            <a href="#" className="inline-flex items-center text-[#C27E68] font-bold uppercase tracking-widest">
-              Shop All <ArrowRight size={18} className="ml-2" />
-            </a>
-          </div>
-        </div>
-      </section>
 
-      {/* Values / Mood */}
-      <section className="py-24 bg-[#4A4036] text-[#F9F7F2]">
-        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-12 text-center">
-          <div className="flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#C27E68] rounded-full flex items-center justify-center mb-6">
-              <Wind size={32} className="text-white" />
-            </div>
-            <h3 className="font-serif text-2xl mb-4">Embodied</h3>
-            <p className="opacity-70 font-light leading-relaxed">
-              "You don't just teach yoga. You live it. You walk through fire and turn embers into light."
-            </p>
-          </div>
-          <div className="flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#8FA38F] rounded-full flex items-center justify-center mb-6">
-              <Sparkles size={32} className="text-white" />
-            </div>
-            <h3 className="font-serif text-2xl mb-4">Joy is Medicine</h3>
-            <p className="opacity-70 font-light leading-relaxed">
-              Sometimes the most spiritual thing you can do is have fun. Dance, laugh, and let your body lead.
-            </p>
-          </div>
-          <div className="flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#D4C4A8] rounded-full flex items-center justify-center mb-6">
-              <Heart size={32} className="text-[#4A4036]" />
-            </div>
-            <h3 className="font-serif text-2xl mb-4">Community</h3>
-            <p className="opacity-70 font-light leading-relaxed">
-              Finding people who celebrate the authentic you. The right environment makes life feel aligned.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Schedule / Where to Find Me */}
-      <section id="schedule" className="py-24 px-6 bg-[#F9F7F2]">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="font-serif text-4xl md:text-5xl mb-12 text-[#4A4036]">Practice with Me</h2>
-          
-          <div className="bg-white rounded-3xl shadow-xl p-8 md:p-12">
-            <div className="grid gap-6 text-left">
-              {/* Class Item */}
-              <div className="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 pb-6 hover:bg-gray-50 rounded-lg transition-colors p-4">
-                <div className="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-auto">
-                  <div className="bg-[#C27E68]/10 text-[#C27E68] p-3 rounded-full">
-                    <Calendar size={24} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-lg">Monday • 7:00 AM & 9:30 AM</h4>
-                    <p className="text-gray-500 font-light">Slow Flow & Yin @ Commune Yoga</p>
-                  </div>
+                <!-- Product 2 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group">
+                    <div class="relative h-64 bg-cream rounded-lg mb-4 overflow-hidden">
+                        <span class="absolute top-2 left-2 bg-charcoal text-white text-[10px] px-2 py-1 uppercase tracking-widest z-10">Restocked</span>
+                        <img src="https://images.pexels.com/photos/4046610/pexels-photo-4046610.jpeg?auto=compress&cs=tinysrgb&w=1000" alt="Yin Skin" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <button class="absolute bottom-4 right-4 bg-white p-3 rounded-full shadow-md translate-y-12 group-hover:translate-y-0 transition-transform duration-300 text-charcoal hover:bg-terra hover:text-white">
+                            <i class="ph ph-bag text-lg"></i>
+                        </button>
+                    </div>
+                    <h3 class="font-serif text-lg mb-1 text-charcoal">Yin Skin Oil + Roller</h3>
+                    <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Grounding Blend</p>
+                    <span class="font-bold text-charcoal">$65.00</span>
                 </div>
-                <button className="border border-[#4A4036] text-[#4A4036] px-6 py-2 rounded-full text-sm uppercase tracking-wider hover:bg-[#4A4036] hover:text-white transition-colors w-full md:w-auto">
-                  Book
-                </button>
-              </div>
 
-               <div className="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 pb-6 hover:bg-gray-50 rounded-lg transition-colors p-4">
-                <div className="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-auto">
-                  <div className="bg-[#8FA38F]/10 text-[#8FA38F] p-3 rounded-full">
-                    <Calendar size={24} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-lg">Tuesday • 9:30 AM</h4>
-                    <p className="text-gray-500 font-light">Slow Flow @ Warrior One</p>
-                  </div>
+                <!-- Product 3 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group">
+                    <div class="relative h-64 bg-cream rounded-lg mb-4 overflow-hidden">
+                        <img src="https://images.pexels.com/photos/4202458/pexels-photo-4202458.jpeg?auto=compress&cs=tinysrgb&w=1000" alt="Flow Drops" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <button class="absolute bottom-4 right-4 bg-white p-3 rounded-full shadow-md translate-y-12 group-hover:translate-y-0 transition-transform duration-300 text-charcoal hover:bg-terra hover:text-white">
+                            <i class="ph ph-bag text-lg"></i>
+                        </button>
+                    </div>
+                    <h3 class="font-serif text-lg mb-1 text-charcoal">Flow Drops</h3>
+                    <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Creativity</p>
+                    <span class="font-bold text-charcoal">$55.00</span>
                 </div>
-                <button className="border border-[#4A4036] text-[#4A4036] px-6 py-2 rounded-full text-sm uppercase tracking-wider hover:bg-[#4A4036] hover:text-white transition-colors w-full md:w-auto">
-                  Book
-                </button>
-              </div>
 
-              <div className="flex flex-col md:flex-row justify-between items-center hover:bg-gray-50 rounded-lg transition-colors p-4">
-                <div className="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-auto">
-                   <div className="bg-[#D4C4A8]/20 text-[#9e8f75] p-3 rounded-full">
-                    <Calendar size={24} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-lg">Thursday • 6:00 AM</h4>
-                    <p className="text-gray-500 font-light">Vinyasa @ Warrior One</p>
-                  </div>
+                <!-- Product 4 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group">
+                    <div class="relative h-64 bg-cream rounded-lg mb-4 overflow-hidden">
+                        <img src="https://images.pexels.com/photos/4041392/pexels-photo-4041392.jpeg?auto=compress&cs=tinysrgb&w=1000" alt="Mist" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <button class="absolute bottom-4 right-4 bg-white p-3 rounded-full shadow-md translate-y-12 group-hover:translate-y-0 transition-transform duration-300 text-charcoal hover:bg-terra hover:text-white">
+                            <i class="ph ph-bag text-lg"></i>
+                        </button>
+                    </div>
+                    <h3 class="font-serif text-lg mb-1 text-charcoal">Space Mist Trio</h3>
+                    <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Clear & Uplift</p>
+                    <span class="font-bold text-charcoal">$85.00</span>
                 </div>
-                <button className="border border-[#4A4036] text-[#4A4036] px-6 py-2 rounded-full text-sm uppercase tracking-wider hover:bg-[#4A4036] hover:text-white transition-colors w-full md:w-auto">
-                  Book
-                </button>
-              </div>
 
             </div>
             
-            <div className="mt-10 pt-10 border-t border-gray-100">
-               <p className="text-gray-500 mb-6 font-light">Can't make it to the studio?</p>
-               <a href="#" className="inline-block bg-[#4A4036] text-white px-8 py-3 rounded-full hover:bg-[#C27E68] transition-colors">
-                 Join Bhuddi Sangha Online
-               </a>
+            <div class="mt-12 text-center md:hidden">
+                <a href="#" class="inline-flex items-center text-terra font-bold uppercase tracking-widest">
+                    Shop All <i class="ph ph-arrow-right ml-2 text-lg"></i>
+                </a>
             </div>
-          </div>
         </div>
-      </section>
+    </section>
 
-      {/* Footer */}
-      <footer className="bg-[#2a241e] text-[#F9F7F2] py-20 px-6">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-12">
-          <div className="col-span-1 md:col-span-1">
-            <h2 className="font-serif text-2xl mb-6">Inner States</h2>
-            <p className="text-gray-400 font-light text-sm leading-relaxed mb-6">
-              Tools for ritual, connection, and coming home to yourself. Based on the Mornington Peninsula.
-            </p>
-            <div className="flex space-x-4">
-              <Instagram size={20} className="hover:text-[#C27E68] cursor-pointer" />
-              <Mail size={20} className="hover:text-[#C27E68] cursor-pointer" />
+    <!-- Values / Mood -->
+    <section class="py-24 bg-charcoal text-cream">
+        <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-12 text-center">
+            
+            <!-- Value 1 -->
+            <div class="flex flex-col items-center">
+                <div class="w-16 h-16 bg-terra rounded-full flex items-center justify-center mb-6 shadow-lg">
+                    <i class="ph ph-wind text-white text-3xl"></i>
+                </div>
+                <h3 class="font-serif text-2xl mb-4">Embodied</h3>
+                <p class="opacity-70 font-light leading-relaxed max-w-xs">
+                    "You don't just teach yoga. You live it. You walk through fire and turn embers into light."
+                </p>
             </div>
-          </div>
 
-          <div>
-            <h4 className="text-[#C27E68] uppercase tracking-widest text-xs font-bold mb-6">Offerings</h4>
-            <ul className="space-y-4 text-sm text-gray-300">
-              <li className="hover:text-white cursor-pointer">Bali Retreats</li>
-              <li className="hover:text-white cursor-pointer">Yin Teacher Training</li>
-              <li className="hover:text-white cursor-pointer">Incense Workshops</li>
-              <li className="hover:text-white cursor-pointer">Studio Classes</li>
-            </ul>
-          </div>
-
-          <div>
-             <h4 className="text-[#C27E68] uppercase tracking-widest text-xs font-bold mb-6">Shop</h4>
-            <ul className="space-y-4 text-sm text-gray-300">
-              <li className="hover:text-white cursor-pointer">Incense Kits</li>
-              <li className="hover:text-white cursor-pointer">Yin Skin Oils</li>
-              <li className="hover:text-white cursor-pointer">Flow Drops</li>
-              <li className="hover:text-white cursor-pointer">Gift Cards</li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-[#C27E68] uppercase tracking-widest text-xs font-bold mb-6">Newsletter</h4>
-            <p className="text-xs text-gray-400 mb-4">Join the list for retreat updates and rituals.</p>
-            <div className="flex">
-              <input type="email" placeholder="Your email..." className="bg-transparent border-b border-gray-600 w-full py-2 text-sm focus:outline-none focus:border-[#C27E68]" />
-              <button className="text-[#C27E68] font-bold uppercase text-xs ml-2">Join</button>
+            <!-- Value 2 -->
+            <div class="flex flex-col items-center">
+                <div class="w-16 h-16 bg-sage rounded-full flex items-center justify-center mb-6 shadow-lg">
+                    <i class="ph ph-sparkle text-white text-3xl"></i>
+                </div>
+                <h3 class="font-serif text-2xl mb-4">Joy is Medicine</h3>
+                <p class="opacity-70 font-light leading-relaxed max-w-xs">
+                    Sometimes the most spiritual thing you can do is have fun. Dance, laugh, and let your body lead.
+                </p>
             </div>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-gray-800 text-center text-xs text-gray-500 uppercase tracking-widest">
-          © 2026 Inner States. Designed with Love.
-        </div>
-      </footer>
-    </div>
-  );
-};
 
-export default App;
+            <!-- Value 3 -->
+            <div class="flex flex-col items-center">
+                <div class="w-16 h-16 bg-gold rounded-full flex items-center justify-center mb-6 shadow-lg">
+                    <i class="ph ph-heart text-charcoal text-3xl"></i>
+                </div>
+                <h3 class="font-serif text-2xl mb-4">Community</h3>
+                <p class="opacity-70 font-light leading-relaxed max-w-xs">
+                    Finding people who celebrate the authentic you. The right environment makes life feel aligned.
+                </p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Schedule -->
+    <section id="schedule" class="py-24 px-6 bg-cream">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="font-serif text-4xl md:text-5xl mb-12 text-charcoal">Practice with Me</h2>
+            
+            <div class="bg-white rounded-3xl shadow-xl p-8 md:p-12">
+                <div class="grid gap-6 text-left">
+                    
+                    <!-- Class Item -->
+                    <div class="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 pb-6 hover:bg-gray-50 rounded-lg transition-colors p-4 group">
+                        <div class="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-auto">
+                            <div class="bg-terra/10 text-terra p-3 rounded-full group-hover:bg-terra group-hover:text-white transition-colors">
+                                <i class="ph ph-calendar-check text-2xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg text-charcoal">Monday • 7:00 AM & 9:30 AM</h4>
+                                <p class="text-gray-500 font-light">Slow Flow & Yin @ Commune Yoga</p>
+                            </div>
+                        </div>
+                        <button class="border border-charcoal text-charcoal px-6 py-2 rounded-full text-sm uppercase tracking-wider hover:bg-charcoal hover:text-white transition-colors w-full md:w-auto">
+                            Book
+                        </button>
+                    </div>
+
+                    <!-- Class Item -->
+                    <div class="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 pb-6 hover:bg-gray-50 rounded-lg transition-colors p-4 group">
+                        <div class="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-auto">
+                            <div class="bg-sage/10 text-sage p-3 rounded-full group-hover:bg-sage group-hover:text-white transition-colors">
+                                <i class="ph ph-calendar-check text-2xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg text-charcoal">Tuesday • 9:30 AM</h4>
+                                <p class="text-gray-500 font-light">Slow Flow @ Warrior One</p>
+                            </div>
+                        </div>
+                        <button class="border border-charcoal text-charcoal px-6 py-2 rounded-full text-sm uppercase tracking-wider hover:bg-charcoal hover:text-white transition-colors w-full md:w-auto">
+                            Book
+                        </button>
+                    </div>
+
+                    <!-- Class Item -->
+                    <div class="flex flex-col md:flex-row justify-between items-center hover:bg-gray-50 rounded-lg transition-colors p-4 group">
+                        <div class="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-auto">
+                             <div class="bg-gold/20 text-[#9e8f75] p-3 rounded-full group-hover:bg-gold group-hover:text-white transition-colors">
+                                <i class="ph ph-calendar-check text-2xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg text-charcoal">Thursday • 6:00 AM</h4>
+                                <p class="text-gray-500 font-light">Vinyasa @ Warrior One</p>
+                            </div>
+                        </div>
+                        <button class="border border-charcoal text-charcoal px-6 py-2 rounded-full text-sm uppercase tracking-wider hover:bg-charcoal hover:text-white transition-colors w-full md:w-auto">
+                            Book
+                        </button>
+                    </div>
+
+                </div>
+                
+                <div class="mt-10 pt-10 border-t border-gray-100 text-center">
+                   <p class="text-gray-500 mb-6 font-light">Can't make it to the studio?</p>
+                   <a href="#" class="inline-block bg-charcoal text-white px-8 py-3 rounded-full hover:bg-terra transition-colors shadow-md">
+                     Join Bhuddi Sangha Online
+                   </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-[#2a241e] text-cream py-20 px-6">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-4 gap-12">
+            
+            <div class="col-span-1 md:col-span-1">
+                <h2 class="font-serif text-2xl mb-6">Inner States</h2>
+                <p class="text-gray-400 font-light text-sm leading-relaxed mb-6">
+                    Tools for ritual, connection, and coming home to yourself. Based on the Mornington Peninsula.
+                </p>
+                <div class="flex space-x-4">
+                    <i class="ph ph-instagram-logo text-2xl hover:text-terra cursor-pointer transition-colors"></i>
+                    <i class="ph ph-envelope-simple text-2xl hover:text-terra cursor-pointer transition-colors"></i>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-terra uppercase tracking-widest text-xs font-bold mb-6">Offerings</h4>
+                <ul class="space-y-4 text-sm text-gray-300">
+                    <li class="hover:text-white cursor-pointer transition-colors">Bali Retreats</li>
+                    <li class="hover:text-white cursor-pointer transition-colors">Yin Teacher Training</li>
+                    <li class="hover:text-white cursor-pointer transition-colors">Incense Workshops</li>
+                    <li class="hover:text-white cursor-pointer transition-colors">Studio Classes</li>
+                </ul>
+            </div>
+
+            <div>
+                 <h4 class="text-terra uppercase tracking-widest text-xs font-bold mb-6">Shop</h4>
+                <ul class="space-y-4 text-sm text-gray-300">
+                    <li class="hover:text-white cursor-pointer transition-colors">Incense Kits</li>
+                    <li class="hover:text-white cursor-pointer transition-colors">Yin Skin Oils</li>
+                    <li class="hover:text-white cursor-pointer transition-colors">Flow Drops</li>
+                    <li class="hover:text-white cursor-pointer transition-colors">Gift Cards</li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-terra uppercase tracking-widest text-xs font-bold mb-6">Newsletter</h4>
+                <p class="text-xs text-gray-400 mb-4">Join the list for retreat updates and rituals.</p>
+                <div class="flex">
+                    <input type="email" placeholder="Your email..." class="bg-transparent border-b border-gray-600 w-full py-2 text-sm focus:outline-none focus:border-terra text-white placeholder-gray-500" />
+                    <button class="text-terra font-bold uppercase text-xs ml-2 hover:text-white transition-colors">Join</button>
+                </div>
+            </div>
+
+        </div>
+        <div class="max-w-7xl mx-auto mt-20 pt-8 border-t border-gray-800 text-center text-xs text-gray-500 uppercase tracking-widest">
+            © 2026 Inner States. Designed with Love.
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Sticky Header Logic
+        const navbar = document.getElementById('navbar');
+        const navBtn = document.getElementById('nav-btn');
+        const mobileBtn = document.getElementById('mobile-menu-btn');
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                // Scrolled State: Cream Background, Charcoal Text
+                navbar.classList.remove('bg-transparent', 'text-cream');
+                navbar.classList.add('bg-cream/95', 'backdrop-blur-md', 'shadow-sm', 'text-charcoal');
+                
+                // Button Change
+                navBtn.classList.remove('bg-cream', 'text-charcoal');
+                navBtn.classList.add('bg-charcoal', 'text-cream');
+            } else {
+                // Top State: Transparent Background, Cream Text
+                navbar.classList.add('bg-transparent', 'text-cream');
+                navbar.classList.remove('bg-cream/95', 'backdrop-blur-md', 'shadow-sm', 'text-charcoal');
+                
+                // Button Change
+                navBtn.classList.add('bg-cream', 'text-charcoal');
+                navBtn.classList.remove('bg-charcoal', 'text-cream');
+            }
+        });
+
+        // Mobile Menu Logic
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const closeMenuBtn = document.getElementById('close-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileLinks = document.querySelectorAll('.mobile-link');
+
+        function toggleMenu() {
+            const isHidden = mobileMenu.classList.contains('hidden');
+            if (isHidden) {
+                mobileMenu.classList.remove('hidden');
+                // Small delay to allow display:flex to apply before opacity transition
+                setTimeout(() => mobileMenu.classList.remove('opacity-0'), 10);
+            } else {
+                mobileMenu.classList.add('opacity-0');
+                setTimeout(() => mobileMenu.classList.add('hidden'), 300);
+            }
+        }
+
+        menuBtn.addEventListener('click', toggleMenu);
+        closeMenuBtn.addEventListener('click', toggleMenu);
+        
+        mobileLinks.forEach(link => {
+            link.addEventListener('click', toggleMenu);
+        });
+
+        // Tab Switching Logic
+        function switchTab(tabName) {
+            // Hide all tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            // Show selected tab content
+            document.getElementById(`tab-content-${tabName}`).classList.add('active');
+
+            // Reset buttons styling
+            const btnRetreats = document.getElementById('tab-btn-retreats');
+            const btnTraining = document.getElementById('tab-btn-training');
+
+            if (tabName === 'retreats') {
+                btnRetreats.classList.add('text-terra', 'border-terra');
+                btnRetreats.classList.remove('text-gray-400', 'border-transparent');
+                
+                btnTraining.classList.remove('text-terra', 'border-terra');
+                btnTraining.classList.add('text-gray-400', 'border-transparent');
+            } else {
+                btnTraining.classList.add('text-terra', 'border-terra');
+                btnTraining.classList.remove('text-gray-400', 'border-transparent');
+
+                btnRetreats.classList.remove('text-terra', 'border-terra');
+                btnRetreats.classList.add('text-gray-400', 'border-transparent');
+            }
+        }
+    </script>
+</body>
+</html>

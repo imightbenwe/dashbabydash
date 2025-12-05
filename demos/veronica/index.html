@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tales of Her | Veronica Santini</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'deep-teal': '#264E49',
+                        'ocean': '#3E7C78',
+                        'sand': '#F3F0E9',
+                        'terracotta': '#C88D72',
+                        'charcoal': '#1F2937',
+                        'cream': '#FAFAF9',
+                        'sage': '#8A9A8A'
+                    },
+                    fontFamily: {
+                        'display': ['"Cinzel Decorative"', 'cursive'],
+                        'serif': ['"Cormorant Garamond"', 'serif'],
+                        'sans': ['"Lato"', 'sans-serif'],
+                    },
+                    backgroundImage: {
+                        'hero-pattern': "url('https://images.unsplash.com/photo-1535295972055-1c762f4483e5?q=80&w=1962&auto=format&fit=crop')",
+                        'paper-texture': "url('https://www.transparenttextures.com/patterns/cream-paper.png')"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-nav {
+            background: rgba(243, 240, 233, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(38, 78, 73, 0.1);
+        }
+        
+        .text-shadow {
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .image-arch {
+            border-radius: 300px 300px 20px 20px;
+        }
+        
+        .soft-card {
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+        }
+        
+        .soft-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(38, 78, 73, 0.1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F3F0E9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #C88D72;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-sand text-charcoal font-sans antialiased relative">
+    <div class="fixed inset-0 pointer-events-none opacity-40 mix-blend-multiply bg-paper-texture z-0"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 glass-nav transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 lg:px-12">
+            <div class="flex justify-between h-24 items-center">
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <span class="font-display text-2xl text-deep-teal tracking-wider">Tales of Her</span>
+                </div>
+                
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex space-x-10 items-center">
+                    <a href="#about" class="text-xs uppercase tracking-[0.2em] text-deep-teal hover:text-terracotta transition-colors font-medium">About</a>
+                    <a href="#retreats" class="text-xs uppercase tracking-[0.2em] text-deep-teal hover:text-terracotta transition-colors font-medium">Retreats</a>
+                    <a href="#gatherings" class="text-xs uppercase tracking-[0.2em] text-deep-teal hover:text-terracotta transition-colors font-medium">Gatherings</a>
+                    <a href="#testimonials" class="text-xs uppercase tracking-[0.2em] text-deep-teal hover:text-terracotta transition-colors font-medium">Testimonials</a>
+                    <a href="#contact" class="px-6 py-3 border border-deep-teal text-deep-teal rounded-sm text-xs uppercase tracking-[0.2em] hover:bg-deep-teal hover:text-sand transition-all duration-500">
+                        Contact
+                    </a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden">
+                    <button class="text-deep-teal p-2">
+                        <i class="fa-solid fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative h-[90vh] flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 bg-hero-pattern bg-cover bg-center bg-fixed"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-deep-teal/20 via-transparent to-sand"></div>
+        
+        <div class="relative z-10 text-center px-6 max-w-5xl mx-auto mt-20">
+            <p class="font-serif text-xl md:text-2xl italic text-white mb-4 tracking-wide drop-shadow-md">
+                Weave your story. Reset your soul.
+            </p>
+            <h1 class="font-display text-5xl md:text-7xl lg:text-8xl text-white mb-8 leading-none drop-shadow-lg">
+                Retreats Where<br/>Women Gather
+            </h1>
+            <div class="flex flex-col md:flex-row gap-6 justify-center items-center mt-12">
+                <a href="#retreats" class="px-12 py-4 bg-sand text-deep-teal font-sans text-xs uppercase tracking-[0.25em] hover:bg-white transition-all duration-300 shadow-lg">
+                    View Retreats
+                </a>
+                <a href="#contact" class="px-12 py-4 border border-sand text-white font-sans text-xs uppercase tracking-[0.25em] hover:bg-sand/10 transition-all duration-300 backdrop-blur-sm">
+                    Book Free Call
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-24 px-6 md:px-12 relative z-10">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div class="order-2 lg:order-1">
+                <span class="text-terracotta font-serif italic text-2xl mb-4 block">"My period went missing..."</span>
+                <h2 class="font-display text-4xl text-deep-teal mb-8">From Burnout to Being</h2>
+                <div class="space-y-6 text-charcoal/80 font-serif text-lg leading-relaxed">
+                    <p>
+                        I was teaching 20 hot yoga classes a week, obsessed with pushing my limits. I thought I was living the dream, but I was unnourished, anxious, and uninspired. My body finally screamed until I had to listen.
+                    </p>
+                    <p>
+                        <span class="text-deep-teal font-bold">Tales of Her</span> was born from that pause.
+                    </p>
+                    <p>
+                        Are you craving a sweet escape from the daily grind? On the verge of a big life change? Or simply yearning to be held in sisterhood? Take a big exhale. You’ve landed in the right place.
+                    </p>
+                    <p class="text-sm font-sans uppercase tracking-widest text-deep-teal pt-6 border-t border-terracotta/30 mt-6">
+                        We blend the practical with the magical.
+                    </p>
+                </div>
+            </div>
+            <div class="order-1 lg:order-2 relative">
+                <div class="absolute inset-0 border border-terracotta transform translate-x-4 translate-y-4 image-arch z-0"></div>
+                <img src="https://images.unsplash.com/photo-1598555855797-068c7c373274?q=80&w=1900&auto=format&fit=crop" alt="Veronica Santini" class="relative z-10 w-full h-[600px] object-cover image-arch shadow-xl grayscale hover:grayscale-0 transition-all duration-700">
+            </div>
+        </div>
+    </section>
+
+    <!-- Retreats Section (The Core Offer) -->
+    <section id="retreats" class="py-32 bg-deep-teal text-sand relative overflow-hidden">
+        <!-- Decorative water mark -->
+        <div class="absolute top-0 right-0 text-[20rem] text-white/5 font-display leading-none -translate-y-1/4 translate-x-1/4 pointer-events-none">
+            Flow
+        </div>
+
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="text-center mb-20">
+                <h2 class="font-display text-5xl md:text-6xl mb-6">Upcoming Retreats</h2>
+                <p class="font-serif text-xl italic opacity-80 max-w-2xl mx-auto">
+                    Handpicked locations. Unforgettable experiences. Deep transformation wrapped in playfulness.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                
+                <!-- Retreat 1 -->
+                <article class="group bg-sand text-charcoal overflow-hidden soft-card flex flex-col h-full">
+                    <div class="h-64 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1504519626634-7340525941b1?q=80&w=2070&auto=format&fit=crop" alt="Greece" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                        <div class="absolute bottom-0 left-0 bg-white/90 backdrop-blur px-4 py-2 text-xs uppercase tracking-widest font-bold text-deep-teal">
+                            June 14-19, 2025
+                        </div>
+                    </div>
+                    <div class="p-8 flex flex-col flex-grow">
+                        <h3 class="font-display text-2xl text-deep-teal mb-2">Just Like Water</h3>
+                        <p class="text-xs uppercase tracking-widest text-terracotta mb-6">Lefkada, Greece</p>
+                        <p class="font-serif text-lg leading-relaxed mb-8 flex-grow">
+                            6 days in a luxurious villa overlooking the bay. Embody your inner mermaid and learn to flow like water.
+                        </p>
+                        <a href="#contact" class="inline-block w-full text-center py-3 border border-deep-teal text-deep-teal text-xs uppercase tracking-widest hover:bg-deep-teal hover:text-sand transition-all">
+                            Learn More
+                        </a>
+                    </div>
+                </article>
+
+                <!-- Retreat 2 -->
+                <article class="group bg-sand text-charcoal overflow-hidden soft-card flex flex-col h-full transform md:-translate-y-8">
+                    <div class="h-64 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1528114039593-43664da1e6af?q=80&w=2072&auto=format&fit=crop" alt="Italy" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                        <div class="absolute bottom-0 left-0 bg-white/90 backdrop-blur px-4 py-2 text-xs uppercase tracking-widest font-bold text-deep-teal">
+                            Oct 04-10, 2025
+                        </div>
+                    </div>
+                    <div class="p-8 flex flex-col flex-grow">
+                        <h3 class="font-display text-2xl text-deep-teal mb-2">Sweetness of Being</h3>
+                        <p class="text-xs uppercase tracking-widest text-terracotta mb-6">Puglia, Italy</p>
+                        <p class="font-serif text-lg leading-relaxed mb-8 flex-grow">
+                            Melt into being and connect to your soft feminine. A 7-day retreat to invoke the 'dolce far niente’ vibes.
+                        </p>
+                        <a href="#contact" class="inline-block w-full text-center py-3 border border-deep-teal text-deep-teal text-xs uppercase tracking-widest hover:bg-deep-teal hover:text-sand transition-all">
+                            Learn More
+                        </a>
+                    </div>
+                </article>
+
+                <!-- Retreat 3 -->
+                <article class="group bg-sand text-charcoal overflow-hidden soft-card flex flex-col h-full">
+                    <div class="h-64 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1539020140153-e479b8c22e70?q=80&w=2070&auto=format&fit=crop" alt="Mallorca" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                        <div class="absolute bottom-0 left-0 bg-white/90 backdrop-blur px-4 py-2 text-xs uppercase tracking-widest font-bold text-deep-teal">
+                            April 24-29, 2026
+                        </div>
+                    </div>
+                    <div class="p-8 flex flex-col flex-grow">
+                        <h3 class="font-display text-2xl text-deep-teal mb-2">Wild Woman</h3>
+                        <p class="text-xs uppercase tracking-widest text-terracotta mb-6">Mallorca</p>
+                        <p class="font-serif text-lg leading-relaxed mb-8 flex-grow">
+                            Reclaim your power, free yourself, and unleash your wild feminine essence. Be unapologetic and embodied.
+                        </p>
+                        <a href="#contact" class="inline-block w-full text-center py-3 border border-deep-teal text-deep-teal text-xs uppercase tracking-widest hover:bg-deep-teal hover:text-sand transition-all">
+                            Learn More
+                        </a>
+                    </div>
+                </article>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Gatherings / Philosophy -->
+    <section id="gatherings" class="py-24 px-6 bg-cream">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-16">
+            <div class="md:w-1/2 relative">
+                <div class="grid grid-cols-2 gap-4">
+                    <img src="https://images.unsplash.com/photo-1518834107812-67b0b7c58434?q=80&w=1935&auto=format&fit=crop" class="w-full h-72 object-cover rounded-tl-[4rem] rounded-br-[4rem]" alt="Yoga">
+                    <img src="https://images.unsplash.com/photo-1501747315-124a0daca28f?q=80&w=1974&auto=format&fit=crop" class="w-full h-72 object-cover rounded-tr-[4rem] rounded-bl-[4rem] mt-12" alt="Food">
+                </div>
+            </div>
+            <div class="md:w-1/2">
+                <h2 class="font-display text-4xl text-deep-teal mb-6">The Gathering Recipe</h2>
+                <p class="font-serif text-2xl italic text-terracotta mb-8">
+                    "Plenty of inspiring practices with a spoonful of belly laughs, a pinch of naps and a touch of deliciousness."
+                </p>
+                <div class="space-y-6 text-lg font-light leading-relaxed text-charcoal/80">
+                    <p>
+                        We skillfully weave a tapestry of experiences: yoga, meditation, breath-work, sound healing, and somatic practices.
+                    </p>
+                    <p>
+                        But we also believe in the medicine of <strong>pleasure</strong>. We handpick locations with particular care to provide you with unforgettable experiences in natural settings, hiring the best chefs for nutritious plant-based meals.
+                    </p>
+                    <div class="grid grid-cols-2 gap-4 mt-8">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-sun text-terracotta"></i> <span class="text-sm uppercase tracking-widest">Somatic Healing</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-leaf text-terracotta"></i> <span class="text-sm uppercase tracking-widest">Plant-Based</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-water text-terracotta"></i> <span class="text-sm uppercase tracking-widest">Nature Immersion</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-heart text-terracotta"></i> <span class="text-sm uppercase tracking-widest">Sisterhood</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section id="testimonials" class="py-24 bg-sand border-t border-deep-teal/5">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-center font-display text-4xl text-deep-teal mb-16">Whispers from the Circle</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div class="bg-white p-10 shadow-sm border border-terracotta/20 relative">
+                    <i class="fa-solid fa-quote-right absolute top-6 right-6 text-4xl text-sand text-deep-teal/10"></i>
+                    <p class="font-serif text-xl leading-relaxed mb-6 italic">
+                        "I arrived depleted and left overflowing. The sisterhood created here is unlike anything I've experienced. Veronica holds space in a way that makes you feel instantly safe."
+                    </p>
+                    <p class="text-xs uppercase tracking-widest font-bold text-terracotta">— Retreat Guest, 2024</p>
+                </div>
+                <div class="bg-white p-10 shadow-sm border border-terracotta/20 relative">
+                    <i class="fa-solid fa-quote-right absolute top-6 right-6 text-4xl text-sand text-deep-teal/10"></i>
+                    <p class="font-serif text-xl leading-relaxed mb-6 italic">
+                        "Veronica weaves magic. The perfect balance of deep inner work and pure, unadulterated joy. And the food... oh my goodness, the food!"
+                    </p>
+                    <p class="text-xs uppercase tracking-widest font-bold text-terracotta">— Wild Woman Attendee</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact / Footer -->
+    <footer id="contact" class="bg-deep-teal text-sand py-20 relative">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <h2 class="font-display text-5xl mb-8">Enter the Inner Circle</h2>
+            <p class="font-serif text-xl mb-12 opacity-80 max-w-2xl mx-auto">
+                If you have any doubts and want to see if what we offer is a good match, let's connect.
+            </p>
+
+            <div class="flex flex-col md:flex-row justify-center gap-6 mb-16">
+                <a href="https://calendly.com/talesofher/connection-call" class="px-10 py-4 bg-sand text-deep-teal text-xs uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white transition-all duration-300">
+                    Book a Free Call
+                </a>
+                <a href="mailto:hello@talesofherretreats.com" class="px-10 py-4 border border-sand text-sand text-xs uppercase tracking-[0.2em] hover:bg-sand hover:text-deep-teal transition-all duration-300">
+                    Email Us
+                </a>
+            </div>
+
+            <div class="mb-16">
+                <h3 class="font-display text-2xl mb-6">Join the Newsletter</h3>
+                <form class="max-w-md mx-auto flex border-b border-sand/30 pb-2">
+                    <input type="email" placeholder="Your email address" class="bg-transparent border-none text-sand placeholder-sand/50 flex-grow focus:ring-0 px-4">
+                    <button type="submit" class="text-xs uppercase tracking-widest hover:text-terracotta transition-colors">Sign Up</button>
+                </form>
+            </div>
+
+            <div class="flex justify-center space-x-8 mb-12 text-sand/60">
+                <a href="https://instagram.com/veronicasantini_yoga" class="hover:text-white transition-colors"><i class="fa-brands fa-instagram text-2xl"></i></a>
+                <a href="#" class="hover:text-white transition-colors"><i class="fa-brands fa-facebook text-2xl"></i></a>
+            </div>
+
+            <div class="border-t border-white/10 pt-8 text-[10px] uppercase tracking-widest opacity-40">
+                <p>&copy; 2025 Tales of Her Retreats. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

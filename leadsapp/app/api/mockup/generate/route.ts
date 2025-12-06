@@ -179,9 +179,31 @@ TECHNICAL REQUIREMENTS:
 - Modern gradient backgrounds
 - Professional color palette that matches their vibe
 
-OUTPUT:
+CRITICAL OUTPUT REQUIREMENTS:
+- This MUST be a standalone HTML file that works when opened directly in a browser
+- DO NOT use React, JSX, or any JavaScript imports (no "import React" or "import { }")
+- DO NOT use useState, useEffect, or any React hooks
+- Use ONLY vanilla JavaScript inside <script> tags if interactivity is needed
+- Use ONLY standard HTML tags (<div>, <section>, <button>, etc.)
+- All styling MUST use Tailwind CSS classes (via CDN)
+- For icons, use FontAwesome HTML tags like <i class="fas fa-heart"></i> (NOT React components)
+
+OUTPUT FORMAT:
 Return ONLY the complete, runnable HTML code starting with <!DOCTYPE html>. 
-No explanations, no markdown code blocks, no commentary - just pure HTML that can be saved and opened in a browser immediately.`;
+No explanations, no markdown code blocks (no \`\`\`html), no commentary, no React/JSX syntax.
+Just pure, valid HTML5 that can be saved as index.html and opened in any browser immediately.
+
+The file should start EXACTLY like this:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  ...
+</head>
+<body>
+  ...
+</body>
+</html>`;
 
     // 7. Call Gemini
     const result = await genai.models.generateContent({
@@ -191,12 +213,28 @@ No explanations, no markdown code blocks, no commentary - just pure HTML that ca
 
     const generatedHtml = result.text;
 
-    // 8. Clean up the response (remove markdown code blocks if any)
-    let cleanHtml = generatedHtml;
+    // 8. Validate and clean the response
+    let cleanHtml = generatedHtml.trim();
+    
+    // Remove markdown code blocks if present
     if (cleanHtml.includes('```html')) {
       cleanHtml = cleanHtml.split('```html')[1].split('```')[0].trim();
     } else if (cleanHtml.includes('```')) {
       cleanHtml = cleanHtml.split('```')[1].trim();
+    }
+
+    // Validate that it's actual HTML, not React/JSX
+    if (cleanHtml.includes('import React') || 
+        cleanHtml.includes('import {') || 
+        cleanHtml.includes('useState') ||
+        cleanHtml.includes('useEffect') ||
+        cleanHtml.startsWith('import ')) {
+      throw new Error('Generated code contains React/JSX syntax instead of pure HTML. Please try again.');
+    }
+
+    // Ensure it starts with DOCTYPE
+    if (!cleanHtml.toLowerCase().includes('<!doctype html>')) {
+      throw new Error('Generated code is not valid HTML (missing DOCTYPE). Please try again.');
     }
 
     // 9. Save to demos folder

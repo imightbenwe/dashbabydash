@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holi Dilks | Somatic Therapist & Women's Mentor</title>
+    
+    <!-- Typography: Cormorant Garamond for that premium, editorial feel & Montserrat for readability -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js for lightweight interactions -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['"Cormorant Garamond"', 'serif'],
+                        sans: ['"Montserrat"', 'sans-serif'],
+                    },
+                    colors: {
+                        'earth-dark': '#1a1816',
+                        'earth-medium': '#4a433e',
+                        'sand': '#e6e2dd',
+                        'sand-light': '#f5f3f0',
+                        'terracotta': '#b56d55',
+                        'sage': '#8fa394',
+                        'gold-muted': '#c5b388'
+                    },
+                    backgroundImage: {
+                        'texture': "url('https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/159c27ac-7616-4b78-b2e4-0720ea185bf2/wb1.png')",
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .fade-in-up {
+            animation: fadeInUp 1s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-400 { animation-delay: 0.4s; }
+        .delay-600 { animation-delay: 0.6s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f3f0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a433e;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-sand-light text-earth-dark font-sans antialiased selection:bg-terracotta selection:text-white">
+
+    <!-- Navigation -->
+    <nav x-data="{ scrolled: false, mobileOpen: false }" 
+         @scroll.window="scrolled = (window.pageYOffset > 50)"
+         :class="{'bg-sand-light/95 backdrop-blur-md shadow-sm py-4': scrolled, 'bg-transparent py-6': !scrolled}"
+         class="fixed w-full z-50 transition-all duration-300">
+        <div class="container mx-auto px-6 flex justify-between items-center">
+            <a href="#" class="font-serif text-2xl md:text-3xl font-semibold tracking-widest uppercase z-50 relative mix-blend-multiply text-earth-dark">Holi Dilks</a>
+            
+            <!-- Desktop Menu -->
+            <div class="hidden md:flex space-x-8 items-center">
+                <a href="#about" class="text-sm tracking-widest hover:text-terracotta transition-colors font-medium text-earth-dark/80">MY WHY</a>
+                <a href="#offerings" class="text-sm tracking-widest hover:text-terracotta transition-colors font-medium text-earth-dark/80">OFFERINGS</a>
+                <a href="#retreats" class="text-sm tracking-widest hover:text-terracotta transition-colors font-medium text-earth-dark/80">RETREATS</a>
+                <a href="#testimonials" class="text-sm tracking-widest hover:text-terracotta transition-colors font-medium text-earth-dark/80">LOVE NOTES</a>
+                <a href="#contact" class="px-6 py-2 border border-earth-dark text-earth-dark hover:bg-earth-dark hover:text-sand-light transition-all duration-300 text-sm tracking-widest uppercase font-medium">Work With Me</a>
+            </div>
+
+            <!-- Mobile Hamburger -->
+            <button @click="mobileOpen = !mobileOpen" class="md:hidden z-50 focus:outline-none text-earth-dark">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x-show="!mobileOpen" d="M4 6h16M4 12h16M4 18h16"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x-show="mobileOpen" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+
+            <!-- Mobile Menu Overlay -->
+            <div x-show="mobileOpen" 
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-x-full"
+                 x-transition:enter-end="opacity-100 translate-x-0"
+                 x-transition:leave="transition ease-in duration-300"
+                 x-transition:leave-start="opacity-100 translate-x-0"
+                 x-transition:leave-end="opacity-0 translate-x-full"
+                 class="fixed inset-0 bg-sand z-40 flex flex-col justify-center items-center space-y-8 md:hidden">
+                <a @click="mobileOpen = false" href="#about" class="font-serif text-3xl hover:text-terracotta">My Why</a>
+                <a @click="mobileOpen = false" href="#offerings" class="font-serif text-3xl hover:text-terracotta">Offerings</a>
+                <a @click="mobileOpen = false" href="#retreats" class="font-serif text-3xl hover:text-terracotta">Retreats</a>
+                <a @click="mobileOpen = false" href="#testimonials" class="font-serif text-3xl hover:text-terracotta">Testimonials</a>
+                <a @click="mobileOpen = false" href="#contact" class="font-serif text-3xl hover:text-terracotta">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative h-screen flex items-center justify-center overflow-hidden">
+        <!-- Background Image with Stronger, Blurred Overlay for Readability -->
+        <div class="absolute inset-0 z-0">
+            <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/40ffb816-14e7-4d54-87c1-11a20bc8051b/Agradeco_2025_15.jpeg" 
+                 alt="Ceremony Gathering" 
+                 class="w-full h-full object-cover">
+            
+            <!-- Modified Overlay: Lighter, with blur to soften the image details behind text -->
+            <div class="absolute inset-0 bg-sand-light/60 backdrop-blur-[3px]"></div>
+            
+            <!-- Additional gradient at bottom for smooth transition -->
+            <div class="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-sand-light via-sand-light/50 to-transparent"></div>
+        </div>
+
+        <div class="relative z-10 text-center px-4 max-w-4xl mx-auto mt-20">
+            <p class="text-sm md:text-base tracking-[0.3em] uppercase mb-4 font-bold text-earth-dark/80 fade-in-up">Somatic Therapist | Breathwork Practitioner | Ceremonialist</p>
+            <h1 class="font-serif text-5xl md:text-7xl lg:text-8xl leading-tight mb-6 text-earth-dark fade-in-up delay-200 drop-shadow-sm">
+                Through the shadows <br> <span class="italic font-light">and into the light.</span>
+            </h1>
+            <p class="text-lg md:text-xl font-medium max-w-2xl mx-auto mb-10 text-earth-dark/90 fade-in-up delay-400">
+                Dedicated to feeling connected to life and living in the most honest, raw way. Unlearning societal expectations to find the beautiful, abundant light within.
+            </p>
+            <a href="#offerings" class="inline-block px-10 py-4 bg-earth-dark text-sand-light uppercase tracking-widest text-sm hover:bg-terracotta transition-colors duration-300 fade-in-up delay-600 shadow-lg">
+                Begin Your Journey
+            </a>
+        </div>
+    </header>
+
+    <!-- 'My Why' / About Section -->
+    <section id="about" class="py-24 bg-white relative">
+        <!-- Decorative texture background -->
+        <div class="absolute top-0 right-0 w-1/3 h-full opacity-10 pointer-events-none" style="background-image: url('https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/159c27ac-7616-4b78-b2e4-0720ea185bf2/wb1.png'); background-size: cover;"></div>
+        
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row items-center gap-16">
+                <div class="w-full md:w-1/2 relative">
+                    <div class="aspect-[3/4] overflow-hidden">
+                        <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/3eddacc5-d6b6-4355-8b01-38975b47bde4/6CC1E337+%283%29.jpg" 
+                             alt="Holi Dilks Portrait" 
+                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-700">
+                    </div>
+                    <!-- Decorative border element -->
+                    <div class="absolute -bottom-6 -right-6 w-full h-full border border-terracotta/30 -z-10"></div>
+                </div>
+                
+                <div class="w-full md:w-1/2 space-y-6">
+                    <span class="text-terracotta text-sm tracking-widest uppercase font-semibold">Meet Holi</span>
+                    <h2 class="font-serif text-4xl md:text-5xl text-earth-dark leading-tight">
+                        I believe that every human deserves a life rooted in connection.
+                    </h2>
+                    <div class="space-y-4 text-earth-medium font-light leading-relaxed">
+                        <p>
+                            For the past 10 years, I have dedicated myself to de-conditioning and unlearning societal expectations placed on women. I dove into shadow work, meeting the deepest and darkest parts of myself, eventually finding a beautiful and abundant light.
+                        </p>
+                        <p>
+                            Ten years ago, I heard the words: <em>"You have a choice."</em> In that moment, I realized how disconnected I had become—numb to life, my heart encased in stone. I had walled myself off from the very essence of living: love, connection, & understanding.
+                        </p>
+                        <p>
+                            My internal devotion to self became a devotion to others. We all deserve safe spaces where we can be witnessed and held. To create true self-love by tapping into our inner somatic communication.
+                        </p>
+                    </div>
+                    <div class="pt-4">
+                        <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/3b354386-f6a6-4019-9d29-c4503f4f1ed1/Screenshot+2025-11-16+at+14.21.19.png" alt="Signature" class="h-16 opacity-60"> 
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services / Offerings Grid -->
+    <section id="offerings" class="py-24 bg-sand-light">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-20">
+                <span class="text-terracotta text-sm tracking-widest uppercase font-semibold block mb-3">Ways to Work With Me</span>
+                <h2 class="font-serif text-4xl md:text-5xl text-earth-dark">Pathways to Remembrance</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                
+                <!-- 1:1 Mentorship -->
+                <div class="group bg-white p-8 hover:shadow-xl transition-all duration-300 border-t-2 border-transparent hover:border-terracotta flex flex-col">
+                    <div class="h-64 mb-6 overflow-hidden bg-gray-100">
+                        <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/b58c3ed9-cca3-425d-8ffc-0bb4e5609beb/REH%26N-54.jpg" alt="1:1 Mentorship" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <h3 class="font-serif text-2xl mb-3 group-hover:text-terracotta transition-colors">1:1 Mentorship & Somatic Therapy</h3>
+                    <p class="text-earth-medium font-light text-sm mb-6 flex-grow">
+                        An invitation to journey inward. Explore the depths of your inner layers and discover rich wisdom. We will build an intimate somatic relationship with yourself, helping you feel empowered and anchored in your own truth.
+                    </p>
+                    <a href="#" class="inline-flex items-center text-sm tracking-widest uppercase border-b border-earth-dark pb-1 hover:text-terracotta hover:border-terracotta transition-colors self-start">
+                        View Details
+                    </a>
+                </div>
+
+                <!-- SHE RISES Online -->
+                <div class="group bg-white p-8 hover:shadow-xl transition-all duration-300 border-t-2 border-transparent hover:border-terracotta flex flex-col">
+                    <div class="h-64 mb-6 overflow-hidden bg-gray-100">
+                        <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/ee521a00-b022-4f43-87b9-0be5e57b9bda/H%26M41.jpg" alt="She Rises" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <h3 class="font-serif text-2xl mb-1 group-hover:text-terracotta transition-colors">SHE RISES Online</h3>
+                    <p class="text-xs uppercase tracking-widest text-terracotta mb-2">Feb - March 2026</p>
+                    <p class="text-earth-medium font-light text-sm mb-6 flex-grow">
+                        A 7-week live online journey of rising. For the woman who's done surviving and ready to soften. We explore somatic awareness, shadow work, inner child healing, and nervous system regulation.
+                    </p>
+                    <a href="#" class="inline-flex items-center text-sm tracking-widest uppercase border-b border-earth-dark pb-1 hover:text-terracotta hover:border-terracotta transition-colors self-start">
+                        Join the Circle
+                    </a>
+                </div>
+
+                <!-- Somatic Communication -->
+                <div class="group bg-white p-8 hover:shadow-xl transition-all duration-300 border-t-2 border-transparent hover:border-terracotta flex flex-col">
+                    <div class="h-64 mb-6 overflow-hidden bg-gray-100">
+                        <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/79832964-5091-462c-b42f-e8e27b785760/DSC07828.jpg" alt="Somatic Communication" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <h3 class="font-serif text-2xl mb-3 group-hover:text-terracotta transition-colors">Somatic Communication</h3>
+                    <p class="text-earth-medium font-light text-sm mb-6 flex-grow">
+                        A non-verbal space where the body becomes the primary vessel for expression. Shed the constraints of language to tap into the visceral language of movement, presence, and energy.
+                    </p>
+                    <a href="#" class="inline-flex items-center text-sm tracking-widest uppercase border-b border-earth-dark pb-1 hover:text-terracotta hover:border-terracotta transition-colors self-start">
+                        Learn More
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Retreats Parallax Section -->
+    <section id="retreats" class="relative py-32 bg-earth-dark text-sand-light">
+        <div class="absolute inset-0 z-0 opacity-20">
+            <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/ce0df2cc-162a-4fa3-a19b-e27270ef4a3f/wb2.png" alt="Texture" class="w-full h-full object-cover">
+        </div>
+
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="flex flex-col items-center mb-20 text-center">
+                <span class="text-gold-muted text-sm tracking-widest uppercase font-semibold mb-3">In-Person Immersions</span>
+                <h2 class="font-serif text-5xl md:text-6xl text-sand-light">Sacred Gatherings</h2>
+            </div>
+
+            <!-- Retreat 1: EARTHED -->
+            <div class="flex flex-col md:flex-row items-center gap-12 mb-32 group">
+                <div class="w-full md:w-3/5 overflow-hidden">
+                    <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/c040ffa8-55e4-45a1-bc8d-eabf210ecab2/deep-evergreen-rainforest-jungle-foliage-600nw-2505837561.webp" 
+                         alt="EARTHED Retreat" 
+                         class="w-full h-[500px] object-cover filter brightness-75 group-hover:brightness-100 transition-all duration-700">
+                </div>
+                <div class="w-full md:w-2/5 md:-ml-20 z-10 bg-earth-medium/90 backdrop-blur p-10 md:p-12 shadow-2xl border-l-4 border-gold-muted">
+                    <h3 class="font-serif text-4xl mb-2 text-white">EARTHED Retreat</h3>
+                    <p class="text-gold-muted uppercase tracking-widest text-sm mb-6">April 2026 | Tulum, Mexico</p>
+                    <p class="font-light text-sand-light mb-8 leading-relaxed">
+                        8 days of reconnection, inner expansion, and deep presence in the lush jungles of the Yucatán. An elemental journey through Air, Fire, Water, and Earth, weaving together ancient wisdom, ceremony, and movement.
+                    </p>
+                    <a href="#" class="text-white border-b border-white pb-1 hover:text-gold-muted hover:border-gold-muted transition-colors uppercase tracking-widest text-sm">View Experience</a>
+                </div>
+            </div>
+
+            <!-- Retreat 2: Agradeço -->
+            <div class="flex flex-col md:flex-row-reverse items-center gap-12 mb-32 group">
+                <div class="w-full md:w-3/5 overflow-hidden">
+                    <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/860bc470-3e13-4b60-8883-37e15f27da89/Agradeco_2025_4+%281%29.jpg" 
+                         alt="Agradeço Retreat" 
+                         class="w-full h-[500px] object-cover filter brightness-75 group-hover:brightness-100 transition-all duration-700">
+                </div>
+                <div class="w-full md:w-2/5 md:-mr-20 z-10 bg-earth-medium/90 backdrop-blur p-10 md:p-12 shadow-2xl border-r-4 border-gold-muted text-right">
+                    <h3 class="font-serif text-4xl mb-2 text-white">Agradeço Sacred Gathering</h3>
+                    <p class="text-gold-muted uppercase tracking-widest text-sm mb-6">June 2026 | Portugal</p>
+                    <p class="font-light text-sand-light mb-8 leading-relaxed">
+                        6 days of devotion to life. A tender, powerful invitation to return to yourself, held in a loving container of ritual, reflection, and shared presence. Featuring White Night Prayer Ceremonies.
+                    </p>
+                    <a href="#" class="text-white border-b border-white pb-1 hover:text-gold-muted hover:border-gold-muted transition-colors uppercase tracking-widest text-sm">View Experience</a>
+                </div>
+            </div>
+
+            <!-- Retreat 3: Echoes -->
+            <div class="flex flex-col md:flex-row items-center gap-12 group">
+                <div class="w-full md:w-3/5 overflow-hidden">
+                    <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/031a4324-d3ea-41c2-9407-00a28060d838/Agradeco_2025_191.jpeg" 
+                         alt="Kea Retreat" 
+                         class="w-full h-[500px] object-cover filter brightness-75 group-hover:brightness-100 transition-all duration-700">
+                </div>
+                <div class="w-full md:w-2/5 md:-ml-20 z-10 bg-earth-medium/90 backdrop-blur p-10 md:p-12 shadow-2xl border-l-4 border-gold-muted">
+                    <h3 class="font-serif text-4xl mb-2 text-white">Echoes of Renewal</h3>
+                    <p class="text-gold-muted uppercase tracking-widest text-sm mb-6">Kea Island, Greece</p>
+                    <p class="font-light text-sand-light mb-8 leading-relaxed">
+                        A return to self. A soft unwinding. Merging the worlds of sound and somatic therapy amidst the tranquil beauty of Greece. Breathwork, movement, and music guide your path to freedom.
+                    </p>
+                    <a href="#" class="text-white border-b border-white pb-1 hover:text-gold-muted hover:border-gold-muted transition-colors uppercase tracking-widest text-sm">View Experience</a>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Testimonials / Love Notes -->
+    <section id="testimonials" class="py-24 bg-white overflow-hidden">
+        <div class="container mx-auto px-6 mb-12 text-center">
+            <span class="text-terracotta text-sm tracking-widest uppercase font-semibold">Love Notes</span>
+            <h2 class="font-serif text-4xl text-earth-dark mt-2">Echoes from the Circle</h2>
+        </div>
+        
+        <!-- Marquee effect -->
+        <div class="relative w-full overflow-hidden">
+            <div class="flex gap-8 animate-marquee whitespace-nowrap py-4" style="animation: marquee 40s linear infinite;">
+                <!-- Note 1 -->
+                <div class="inline-block w-[400px] bg-sand-light p-8 whitespace-normal rounded-sm">
+                    <p class="font-serif text-xl italic text-earth-dark mb-4">"Holi’s heart is full of pure love! I felt the support and true care since our first session. Every session feels like a relief."</p>
+                    <p class="text-xs font-bold uppercase tracking-widest text-terracotta">— Christina</p>
+                </div>
+                <!-- Note 2 -->
+                <div class="inline-block w-[400px] bg-sand-light p-8 whitespace-normal rounded-sm">
+                    <p class="font-serif text-xl italic text-earth-dark mb-4">"I have had trauma releases in breathwork before but nothing like this. I felt, as promised, reborn. Thank you for your beautiful work."</p>
+                    <p class="text-xs font-bold uppercase tracking-widest text-terracotta">— Joanna, UK</p>
+                </div>
+                <!-- Note 3 -->
+                <div class="inline-block w-[400px] bg-sand-light p-8 whitespace-normal rounded-sm">
+                    <p class="font-serif text-xl italic text-earth-dark mb-4">"Holi makes me feel seen. It feels natural and safe for me to share with her. At the same time she challenges me to let go."</p>
+                    <p class="text-xs font-bold uppercase tracking-widest text-terracotta">— Charlie</p>
+                </div>
+                <!-- Note 4 -->
+                <div class="inline-block w-[400px] bg-sand-light p-8 whitespace-normal rounded-sm">
+                    <p class="font-serif text-xl italic text-earth-dark mb-4">"My life has totally transformed and I am beyond grateful for meeting her, she's very special and gifted."</p>
+                    <p class="text-xs font-bold uppercase tracking-widest text-terracotta">— Amy Simmonds</p>
+                </div>
+                 <!-- Note 5 -->
+                 <div class="inline-block w-[400px] bg-sand-light p-8 whitespace-normal rounded-sm">
+                    <p class="font-serif text-xl italic text-earth-dark mb-4">"Being able to express myself without words was very enlightening to me. I felt a deep realization that we’re all mirroring each other."</p>
+                    <p class="text-xs font-bold uppercase tracking-widest text-terracotta">— Mehta Beausoleil</p>
+                </div>
+            </div>
+        </div>
+        
+        <style>
+            @keyframes marquee {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+            }
+        </style>
+    </section>
+
+    <!-- Instagram/Visual Feed Section -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-0">
+        <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/bf768137-afcb-4963-822b-6bcd325a5415/Agradeco_2025_9.jpeg" alt="Gallery 1" class="w-full h-64 object-cover hover:opacity-80 transition-opacity">
+        <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/62688381-9874-4aa7-a8eb-a4ca02f63759/Agradeco_2025_73.jpeg" alt="Gallery 2" class="w-full h-64 object-cover hover:opacity-80 transition-opacity">
+        <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/4a8ac388-bf55-498f-82b2-2718f81d35a6/ASG01276.jpg" alt="Gallery 3" class="w-full h-64 object-cover hover:opacity-80 transition-opacity">
+        <img src="https://images.squarespace-cdn.com/content/v1/676f339bf9dee9435d61118b/1e32da38-7065-441b-8b93-8aa1227f92be/H%26M23.jpg" alt="Gallery 4" class="w-full h-64 object-cover hover:opacity-80 transition-opacity">
+    </section>
+
+    <!-- Footer / Contact -->
+    <footer id="contact" class="bg-earth-dark text-sand-light py-20 border-t border-earth-medium">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-16">
+                
+                <!-- Brand -->
+                <div class="space-y-6">
+                    <h2 class="font-serif text-3xl tracking-wider">HOLI DILKS</h2>
+                    <p class="font-light text-sand/70 text-sm leading-relaxed">
+                        Women's Mentor, Somatic Therapist, Breathwork Practitioner, Ceremonialist, Facilitator and human being, dedicated to feeling connected to life.
+                    </p>
+                </div>
+
+                <!-- Links -->
+                <div class="space-y-4">
+                    <h4 class="text-terracotta text-xs uppercase tracking-widest font-bold">Menu</h4>
+                    <ul class="space-y-2 text-sm font-light">
+                        <li><a href="#about" class="hover:text-terracotta transition-colors">About Me</a></li>
+                        <li><a href="#offerings" class="hover:text-terracotta transition-colors">1:1 Mentorship</a></li>
+                        <li><a href="#retreats" class="hover:text-terracotta transition-colors">Retreats</a></li>
+                        <li><a href="#" class="hover:text-terracotta transition-colors">Newsletter</a></li>
+                    </ul>
+                </div>
+
+                <!-- Newsletter -->
+                <div class="space-y-6">
+                    <h4 class="text-terracotta text-xs uppercase tracking-widest font-bold">Stay Connected</h4>
+                    <p class="text-sm font-light text-sand/70">Join the list for updates on retreats, ceremonies, and musings.</p>
+                    <form class="flex flex-col space-y-3">
+                        <input type="email" placeholder="Your email address" class="bg-transparent border-b border-sand/30 py-2 focus:outline-none focus:border-terracotta transition-colors text-sand text-sm font-light">
+                        <button type="submit" class="self-start text-xs uppercase tracking-widest hover:text-terracotta transition-colors pt-2">Subscribe</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-20 pt-8 border-t border-earth-medium/30 flex flex-col md:flex-row justify-between items-center text-xs text-sand/50 font-light">
+                <p>&copy; 2025 Holi Dilks. All rights reserved.</p>
+                <div class="flex space-x-6 mt-4 md:mt-0">
+                    <a href="#" class="hover:text-terracotta">Instagram</a>
+                    <a href="#" class="hover:text-terracotta">Spotify</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Simple Intersection Observer for Fade-in animations
+        document.addEventListener('DOMContentLoaded', () => {
+            const observerOptions = {
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in-up');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            // Select elements to animate (headings, cards, images)
+            const animatedElements = document.querySelectorAll('#about h2, #about p, #offerings .group, #retreats .group, #testimonials h2');
+            
+            animatedElements.forEach(el => {
+                el.style.opacity = '0'; // Initial state
+                observer.observe(el);
+            });
+        });
+    </script>
+</body>
+</html>

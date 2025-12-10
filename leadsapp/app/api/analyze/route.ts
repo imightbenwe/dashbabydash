@@ -11,6 +11,10 @@ export async function POST(request: NextRequest) {
     
     const prospectName = formData.get('prospectName') as string;
     const company = formData.get('company') as string;
+    const email = formData.get('email') as string;
+    const igHandle = formData.get('igHandle') as string;
+    const websiteUrl = formData.get('websiteUrl') as string;
+    const profilePictureUrl = formData.get('profilePictureUrl') as string;
     const websiteData = formData.get('websiteData') as string;
     
     console.log('👤 Prospect:', prospectName, 'Company:', company);
@@ -33,7 +37,11 @@ export async function POST(request: NextRequest) {
       .insert({
         name: prospectName,
         company: company || null,
-        status: 'new',
+        email: email || null,
+        instagram: igHandle || null,
+        website: websiteUrl || null,
+        profile_picture: profilePictureUrl || null,
+        status: 'lead_collected',
       })
       .select()
       .single();
@@ -45,6 +53,15 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ Lead created:', lead.id);
 
+    // SKIP AI ANALYSIS ON INITIAL CREATION - Return early
+    console.log('⏭️ Skipping AI analysis (run via "Run AI Analysis" button instead)');
+    return NextResponse.json({
+      message: 'Lead created successfully',
+      leadId: lead.id,
+    });
+
+    // === REST OF CODE DISABLED FOR NOW ===
+    /* 
     // 2. Parse and store raw data
     const combinedData: any = {
       prospectName,
@@ -234,9 +251,9 @@ export async function POST(request: NextRequest) {
     await supabaseAdmin
       .from('leads')
       .update({
-        status: 'analysis_done',
+        status: 'lead_collected',
         persona_score: personaScore,
-        next_action: 'Generate Website',
+        next_action: 'Send Email',
       })
       .eq('id', lead.id);
 
@@ -251,6 +268,7 @@ export async function POST(request: NextRequest) {
       },
       email: emailData,
     });
+    */ // End disabled block
 
   } catch (error) {
     console.error('❌ Analysis API Error:', error);

@@ -5,13 +5,13 @@ import { generateEmailWithOpenAI } from '@/lib/ai-service';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { leadId, emailType = 'initial', template } = body;
+    const { leadId, emailType = 'initial', template, regenerate = false } = body;
 
     if (!leadId) {
       return NextResponse.json({ error: 'Lead ID is required' }, { status: 400 });
     }
 
-    console.log('📧 Email generation request:', { leadId, emailType, hasTemplate: !!template });
+    console.log('📧 Email generation request:', { leadId, emailType, hasTemplate: !!template, regenerate });
 
     // Fetch lead
     const { data: lead, error: leadError } = await supabaseAdmin
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email of this type already exists
+    // Check if email of this type already exists and delete it (always allow regeneration)
     const { data: existingEmail } = await supabaseAdmin
       .from('generated_emails')
       .select('*')
@@ -50,10 +50,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existingEmail) {
-      return NextResponse.json(
-        { error: `An ${emailType.replace(/_/g, ' ')} email already exists for this lead.` },
-        { status: 400 }
-      );
+      console.log(`🔄 Deleting existing ${emailType} email to regenerate`);
+      await supabaseAdmin
+        .from('generated_emails')
+        .delete()
+        .eq('id', existingEmail.id);
     }
 
     // Generate email

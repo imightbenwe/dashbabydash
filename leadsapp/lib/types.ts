@@ -3,7 +3,7 @@ export type Lead = {
   name: string;
   company: string | null;
   email: string | null;
-  status: 'new' | 'analysis_done' | 'pdf_sent' | 'follow_up_1' | 'follow_up_2' | 'closed' | 'lost';
+  status: 'lead_collected' | 'email_1_sent' | 'email_2_sent' | 'email_3_sent' | 'replied_not_fit' | 'replied_interested' | 'call_booked' | 'call_done_thinking' | 'won' | 'lost' | 'site_live';
   persona_score: 'high' | 'medium' | 'low' | null;
   next_action: string | null;
   created_at: string;

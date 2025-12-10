@@ -47,7 +47,9 @@ export async function POST(request: NextRequest) {
         name,
         company: company || null,
         email: email || null,
-        status: 'new',
+        status: body.status || 'lead_collected',
+        website: body.website || null,
+        notes: body.notes || null,
       })
       .select()
       .single();

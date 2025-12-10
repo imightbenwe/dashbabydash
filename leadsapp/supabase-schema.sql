@@ -14,7 +14,7 @@ CREATE TABLE leads (
   substack TEXT,
   threads TEXT,
   linkedin TEXT,
-  status TEXT DEFAULT 'new' CHECK (status IN ('new', 'analysis_done', 'pdf_sent', 'site_live', 'follow_up_sent', 'closed_won', 'closed_lost')),
+  status TEXT DEFAULT 'lead_collected' CHECK (status IN ('lead_collected', 'email_1_sent', 'email_2_sent', 'email_3_sent', 'replied_not_fit', 'replied_interested', 'call_booked', 'call_done_thinking', 'won', 'lost', 'site_live')),
   persona_score TEXT CHECK (persona_score IN ('high', 'medium', 'low')),
   next_action TEXT,
   

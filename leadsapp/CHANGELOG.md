@@ -2,6 +2,322 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [1.2.0] - 2024-12-10
+
+### 🎯 Google Places: Complete Lead Tracking & Management System
+
+#### ✨ Major Features Implemented
+
+**1. Smart Lead Tracking System**
+- **Open Tab**: Automatically saves all searched businesses that haven't been dismissed or converted
+- **Dismissed Tab**: Tracks all dismissed businesses with optional dismissal reasons  
+- **Promoted Tab**: Tracks all businesses successfully converted to CRM leads
+- All results persist across sessions in dedicated database tables (`open_leads`, `dismissed_leads`, `promoted_leads`)
+
+**2. Duplicate Detection & Filtering**
+- Intelligent filtering prevents showing same business twice in search results
+- Searches only display NEW businesses not already in Open, Dismissed, or Promoted tabs
+- Real-time detection with message: "No new results. All X results already in Open, Dismissed, or Promoted tabs"
+- Existing businesses show "Open" badge if previously seen in search results
+
+**3. Search Query Tracking**
+- Every business stores exact search query, location, and date that found it
+- Query info displayed in top-right corner: `query: X, location: Y, date: DD/MM/YYYY`
+- Applied across all tabs (Search, Open, Dismissed, Promoted)
+- Enables filtering and analysis of which searches produced which leads
+
+**4. Navigation Structure**
+- Google Places organized as main tab with 4 sub-sections:
+  - **Search**: Perform new searches (clean results every time)
+  - **Open (X)**: View all businesses ever shown
+  - **Dismissed (X)**: Review dismissed businesses  
+  - **Promoted (X)**: Track converted leads
+- Live counts displayed in sidebar navigation
+
+**5. Dismissal Features**
+- **Individual Dismiss**: Click dismiss button to add optional reason note via dialog
+- **Bulk Dismiss**: Select multiple leads in Open tab and dismiss without notes
+- Dismissed leads stored with reason, timestamp, and original search query
+- Dismiss button available on individual cards in Open and Search views
+
+**6. Lead Creation & Promotion**
+- **From Search View**: Select businesses with checkboxes and bulk create leads
+- **From Open Tab**: Select any open businesses and convert to CRM leads with "Create X Leads" button
+- Automatic promotion tracking: stores all metadata in `promoted_leads` table
+- Removes from Open tab when promoted, deletes from `open_leads` table
+- Shows "Already a Lead" badge if business already exists in CRM
+
+**7. Filtering System (Open Tab)**
+- **Search Query Filter**: Filter by search term text (e.g., "comic books")
+- **Date From Filter**: Show leads from specific date onwards
+- **Date To Filter**: Show leads up to specific date  
+- Live count display: "Showing X of Y leads"
+- One-click "Clear Filters" button when any filter active
+
+#### 🗄️ Database Schema Updates
+
+**New Tables Created**:
+```sql
+open_leads      - All businesses shown to user
+dismissed_leads - All dismissed businesses with reasons
+promoted_leads  - All businesses converted to CRM leads
+```
+
+**Key Fields Added**:
+- `search_query` (TEXT) - The search term used
+- `search_location` (TEXT) - Location parameter  
+- `search_date` (TIMESTAMPTZ) - When search was performed
+- `first_shown_at`, `last_shown_at` (Open leads)
+- `dismissed_at`, `reason` (Dismissed leads)
+- `promoted_at`, `lead_id` (Promoted leads)
+
+**Indexes & Performance**:
+- Indexes on `user_id`, `campaign_id`, `place_id` for fast queries
+- Unique constraints on `(user_id, place_id)` to prevent duplicates
+- Row Level Security (RLS) policies for all tables
+
+#### 🔧 API Endpoints Added
+
+- `POST /api/open` - Save search results to open_leads
+- `GET /api/open` - Fetch open leads with filtering
+- `DELETE /api/open` - Remove from open_leads when promoted
+
+- `POST /api/dismissed` - Dismiss a lead with optional reason
+- `GET /api/dismissed` - Fetch dismissed leads
+- `DELETE /api/dismissed` - Undismiss a lead (future feature)
+
+- `POST /api/promoted` - Save promoted lead with search metadata  
+- `GET /api/promoted` - Fetch promoted leads
+
+- `GET /api/existing-places` - Fetch all place IDs for duplicate detection
+
+#### 🐛 Bug Fixes
+
+1. **Fixed Open/Dismissed badge conflict** - Badges now mutually exclusive, proper conditional logic
+2. **Fixed missing Open badge on Open tab** - Added badge to Open tab card headers
+3. **Fixed missing search query display** - Added `search_query`, `search_location`, `search_date` columns to `dismissed_leads` table via ALTER TABLE statements
+4. **Fixed duplicate results appearing** - Implemented `fetchExistingPlaceIds()` before search, filters against Set for O(1) lookup
+5. **Fixed old results persisting on new search** - Clear `placesResults` state immediately when search button clicked
+6. **Fixed pagination conflicts** - Removed "Load More" button, pagination incompatible with duplicate filtering
+7. **Fixed promoted leads missing query metadata** - Pass `searchQuery`, `searchLocation`, `searchDate` to `/api/promoted` endpoint
+
+#### 🎨 UI/UX Enhancements
+
+**Card Layout Updates**:
+- Consistent layout across all tabs (Search, Open, Dismissed, Promoted)
+- Search query/location/date displayed in top-right corner on all cards
+- Dismiss button positioned bottom-right
+- Color-coded badges: Blue (Open), Red (Dismissed), Green (Promoted)  
+- Checkbox selection for bulk actions in Search and Open views
+
+**User Feedback**:
+- Success messages after bulk actions: "Successfully created X leads!"
+- Confirmation dialogs for bulk dismiss: "Are you sure you want to dismiss X leads?"
+- Live selection counts: "(X selected)"
+- Filter results count: "Showing X of Y leads"
+- Loading states with spinners for async operations
+
+**Filter UI (Open Tab)**:
+- Gray background section with "Filter Leads" header
+- 3-column grid: Search Query input, Date From picker, Date To picker
+- Clear Filters button appears when any filter active
+- Real-time filtering as user types/selects
+
+#### 🔧 Technical Improvements
+
+**Performance Optimizations**:
+- Uses `Set()` for O(1) place ID lookups during filtering instead of `Array.includes()`
+- Caches existing place IDs before each search via `/api/existing-places`
+- Parallel database queries in `existing-places` endpoint
+
+**State Management**:
+- Added filter states: `openFilterQuery`, `openFilterDateFrom`, `openFilterDateTo`
+- Proper cleanup of `nextPageToken` to prevent pagination errors
+- Clear `placesResults` immediately on new search (before async operations)
+
+**API Updates**:
+- `/api/open` accepts `searchQuery` and `searchLocation` parameters
+- `/api/dismissed` fetches search query from `open_leads` before inserting, deletes from `open_leads` after
+- `/api/promoted` accepts search metadata and creates record with query tracking
+
+#### 📝 Files Modified
+
+**Database**:
+- `DISMISSED_LEADS_MIGRATION.sql` - Complete schema with ALTER TABLE statements for existing tables
+
+**Frontend**:
+- `app/page.tsx` - Major updates:
+  - Added Open/Dismissed/Promoted tabs with navigation
+  - Implemented filtering UI and logic
+  - Added bulk dismiss functionality  
+  - Updated card layouts with query display
+  - Fixed search clearing and state management
+  - Removed pagination (Load More button)
+
+**Backend**:  
+- `app/api/open/route.ts` - New endpoint for open leads management
+- `app/api/dismissed/route.ts` - Enhanced with search query tracking
+- `app/api/promoted/route.ts` - New endpoint with full metadata storage
+- `app/api/existing-places/route.ts` - New endpoint for duplicate detection
+
+#### 📋 Typical User Workflow
+
+1. **Search**: Enter "comic books in new york" → Returns 20 results
+2. **Auto-Save**: All 20 automatically saved to Open tab with query metadata
+3. **Selection**: Review results in Search view, select 5 interesting ones via checkboxes
+4. **Action Options**:
+   - Create 3 leads → Moved to Promoted tab with query tracking
+   - Dismiss 2 → Moved to Dismissed tab with "Not relevant" reason
+5. **Filter**: In Open tab, filter by query "comic books" to see only those results
+6. **Re-Search**: Search again for same query → "No new results. All 20 results already in Open, Dismissed, or Promoted tabs"
+7. **Analysis**: Check Promoted tab to see which queries produced best leads
+
+#### ⚠️ Migration Required
+
+Users must run `DISMISSED_LEADS_MIGRATION.sql` in Supabase SQL Editor to:
+- Create new tables (`open_leads`, `dismissed_leads`, `promoted_leads`)
+- Add `search_query`, `search_location`, `search_date` columns via ALTER TABLE
+- Set up indexes and RLS policies
+- Uses `IF NOT EXISTS` and `ADD COLUMN IF NOT EXISTS` for safe re-running
+
+#### 🔮 Breaking Changes
+
+- **Removed pagination** - "Load More" button removed due to conflicts with duplicate filtering
+- Each search returns max 20 results (configurable via dropdown)
+- Complete result history available in Open tab instead of paginated search results
+
+---
+
+## [1.1.1] - 2024-12-10
+
+### 🔧 Bug Fixes & Improvements
+
+#### Fixed Instagram Upload Tagging
+- **Instagram uploads now properly tagged** - Fixed API endpoint to accept `sourceType` parameter
+- Instagram data now correctly labeled as `'instagram'` instead of `'other'` in Data Sources
+- Updated `/api/leads/[id]/additional-data` route to handle source type properly
+- JSON parsing for Instagram data with validation
+
+#### Enhanced Raw Lead Data Export
+- **"Copy Raw Lead Data" now includes ALL data sources** - Previously only included website data
+- Now exports all uploaded data: Instagram, website, Substack, Threads, and additional data
+- Each source clearly labeled with type, filename, upload timestamp, and full content
+- Added 80-character separator lines between data sources for readability
+- Better formatting with section headers for each data source type
+
+#### UI/UX Improvements
+- **Moved Additional Data section next to Instagram upload** - No longer at bottom of page
+- Created 2-column grid layout with Instagram upload (left) and Additional Data (right)
+- Both sections now have visual parity and equal importance
+- Removed duplicate Additional Data section that was at bottom
+- Additional Data section remains collapsible (default: collapsed)
+
+#### AI Analysis Display Enhancement
+- **Added Email Opening field to AI Analysis Results** - Now prominently displayed at top
+- Email opening shown in gradient indigo/purple box with dedicated styling
+- Includes usage tips: "This is your warm, natural email opener"
+- Field labeled as "EMAIL OPENING (First 1-2 Sentences)"
+- Makes it clear this is the primary content to copy for cold emails
+
+### ✨ AI Prompt Optimization
+
+#### New High-Performance Email Opening Prompt
+- **Completely rewrote emailOpening generation prompt** for both Gemini and OpenAI
+- New constraints for natural, human-sounding openers:
+  - Maximum 18 words
+  - Reference only ONE broad theme (not multiple)
+  - Must sound like "glanced at their brand" not "studied them"
+  - No specific details: schedules, events, workshops, pricing, locations, dates
+  - No summarizing offerings or restating slogans
+  - Acknowledge general vibe/intention only (rest, nervous system support, sound healing, etc.)
+  - Tone: warm, calm, human, lightly personalized — nothing dramatic or marketing-y
+- Eliminates "stalker-ish" or overly analytical openers
+- Produces more authentic, conversational email starts
+
+### 📝 Files Modified
+- `lib/ai-service.ts` - Updated emailOpening prompts in both `analyzeWithGemini()` and `analyzeWithOpenAI()`
+- `app/api/leads/[id]/additional-data/route.ts` - Added sourceType parameter handling, JSON parsing for Instagram
+- `app/lead/[id]/page.tsx` - Multiple updates:
+  - Added emailOpening display in AI Analysis Results
+  - Moved Additional Data section to 2-column grid with Instagram upload
+  - Removed duplicate Additional Data section
+  - Updated `copyRawLeadData()` function to include all data sources
+
+### 🎯 Impact
+- Better organized lead detail page with clearer workflow
+- More accurate data source labeling for tracking
+- Complete data export for external analysis or backup
+- More natural, less creepy email openers that sound human-written
+- Improved first impression with prospects through better email openings
+
+---
+
+## [1.1.0] - 2024-12-10
+
+### 🎨 Lead Detail Page UI Improvements
+
+#### ✨ Features Added
+- **"Run AI Analysis" Button** - Added prominent button in Quick Actions section to manually trigger AI analysis for existing leads
+  - Gradient purple/pink styling for visibility
+  - Loading state with "Analyzing..." text
+  - Calls `/api/leads/[id]/run-analysis` endpoint
+  - Positioned first in Quick Actions for workflow priority
+  
+- **Collapsible Data Sources Section** - Made "Data Sources" section expandable/collapsible
+  - Added ChevronUp/ChevronDown icons from lucide-react
+  - Clickable header with hover effect
+  - Default state: Expanded (user requested)
+  - Shows all raw data sources (Instagram, website, Substack, etc.) when expanded
+  
+- **Collapsible Additional Data Section** - Made "Add Additional Data" section expandable/collapsible
+  - Added ChevronUp/ChevronDown icons
+  - Clickable header with hover effect
+  - Default state: Collapsed (user requested)
+  - Reveals file upload and text area when expanded
+  
+- **Dedicated Instagram Upload Section** - Added separate Instagram data upload area
+  - Pink/purple gradient styling matching Instagram brand
+  - Accepts `.json` files only (Instagram data export format)
+  - JSON validation before upload
+  - Loading state with spinner animation
+  - Success/error feedback messages
+  - Helpful tip about running AI analysis after upload
+  - Automatic refresh of data sources list after successful upload
+
+#### 🐛 Bug Fixes
+- **Removed Duplicate "Additional Data" Section** - Deleted first duplicate instance, kept properly placed second instance
+- **Removed "Cold Email Personalization" Section** - Removed unused section containing:
+  - Mutual Connection field
+  - Specific Hook Story Override field
+  - PDF URL field
+  - Mockup Site URL field
+
+#### 🔧 Technical Changes
+- Added new state variables:
+  - `isDataSourcesExpanded` (useState, default: true)
+  - `isAdditionalDataExpanded` (useState, default: false)
+  - `isUploadingInstagram` (useState, default: false)
+- Added `handleInstagramFileUpload()` function with:
+  - File reading with FileReader API
+  - JSON validation
+  - API call to `/api/leads/[id]/additional-data` with sourceType parameter
+  - Error handling and user feedback
+- Updated imports: Added ChevronDown, ChevronUp from lucide-react
+- Modified section layouts to support collapsible UI pattern
+
+#### 📝 Files Modified
+- `app/lead/[id]/page.tsx` - Major UI restructuring and feature additions
+
+#### 🎯 User Experience Improvements
+- Cleaner, more organized lead detail page
+- Reduced visual clutter with collapsible sections
+- Clear workflow: Upload → Analyze → Generate Email
+- Better guidance with contextual tips
+- Eliminated confusion from duplicate sections
+- Removed unused fields reducing cognitive load
+
+---
+
 ## [1.0.0] - 2024-12-04
 
 ### 🎉 Initial Release - Full Functional Implementation

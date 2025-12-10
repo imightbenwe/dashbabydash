@@ -41,7 +41,7 @@ export async function GET(
     return NextResponse.json({
       openai: openaiAnalysis || null,
       gemini: geminiAnalysis || null,
-      raw_data: rawData || [],
+      rawDataSources: rawData || [],
     });
 
   } catch (error) {

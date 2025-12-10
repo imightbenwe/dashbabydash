@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PersonaAI Capture</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f8f9fa;
+      padding: 16px;
+      min-width: 300px;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .header p {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .field:last-child {
+      border-bottom: none;
+    }
+
+    .field-checkbox {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      cursor: pointer;
+      accent-color: #10b981;
+    }
+
+    .field-checkbox:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .field-checkbox:checked {
+      accent-color: #059669;
+    }
+
+    .field-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      flex: 1;
+    }
+
+    .field-value {
+      font-size: 12px;
+      color: #059669;
+      font-weight: 500;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .field-empty {
+      font-size: 12px;
+      color: #d1d5db;
+      font-style: italic;
+    }
+
+    .field-input {
+      font-size: 12px;
+      padding: 4px 8px;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      max-width: 200px;
+      font-family: inherit;
+    }
+
+    .field-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #f9fafb;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #dc2626;
+    }
+
+    .status {
+      padding: 8px 12px;
+      background: #f3f4f6;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>PersonaAI Capture</h1>
+    <p id="pageType">Ready to capture data</p>
+  </div>
+
+  <div id="statusMessage" class="status" style="display: none;"></div>
+
+  <div class="section">
+    <div class="section-title">Basic Info</div>
+    
+    <div class="field">
+      <input type="checkbox" class="field-checkbox" id="check-name" disabled>
+      <div class="field-label">Name</div>
+      <input type="text" id="value-name" class="field-input" placeholder="Not captured">
+    </div>
+
+    <div class="field">
+      <input type="checkbox" class="field-checkbox" id="check-company" disabled>
+      <div class="field-label">Company</div>
+      <input type="text" id="value-company" class="field-input" placeholder="Not captured">
+    </div>
+
+    <div class="field">
+      <input type="checkbox" class="field-checkbox" id="check-email" disabled>
+      <div class="field-label">Email</div>
+      <input type="email" id="value-email" class="field-input" placeholder="Not captured">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Social & Web</div>
+    
+    <div class="field">
+      <input type="checkbox" class="field-checkbox" id="check-website" disabled>
+      <div class="field-label">Website</div>
+      <input type="url" id="value-website" class="field-input" placeholder="Not captured">
+    </div>
+
+    <div class="field">
+      <input type="checkbox" class="field-checkbox" id="check-igHandle" disabled>
+      <div class="field-label">Instagram</div>
+      <input type="text" id="value-igHandle" class="field-input" placeholder="Not captured">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Website Data</div>
+    
+    <div class="field">
+      <input type="checkbox" class="field-checkbox" id="check-websiteData" disabled>
+      <div class="field-label">Content Scraped</div>
+      <div id="value-websiteData" class="field-empty">Not captured</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="pullBtn" class="btn btn-primary">Pull Data from Page</button>
+    <button id="sendBtn" class="btn btn-primary" disabled>Send to PersonaAI</button>
+    <button id="clearBtn" class="btn btn-danger">Clear All Data</button>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>

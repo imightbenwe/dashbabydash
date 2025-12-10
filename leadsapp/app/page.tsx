@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Brain, Plus, Users, Mail, ArrowLeft, CheckCircle, Upload, Globe, FolderOpen, FileText, AtSign, Database, Sparkles, Filter, Clock, MessageSquare, Fingerprint, Check, Menu, Calendar } from 'lucide-react';
+import { Brain, Plus, Users, Mail, ArrowLeft, CheckCircle, Upload, Globe, FolderOpen, FileText, AtSign, Database, Sparkles, Filter, Clock, MessageSquare, Fingerprint, Check, Menu, Calendar, X } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -10,6 +10,12 @@ export default function Home() {
   const [leads, setLeads] = useState<any[]>([]);
   const [prospectName, setProspectName] = useState('');
   const [company, setCompany] = useState('');
+  const [email, setEmail] = useState('');
+  const [igHandle, setIgHandle] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [profilePictureUrl, setProfilePictureUrl] = useState('');
+  const [isUploadingProfilePic, setIsUploadingProfilePic] = useState(false);
+  const [uploadedProfilePicUrl, setUploadedProfilePicUrl] = useState('');
   const [websiteData, setWebsiteData] = useState('');
   const [igFile, setIgFile] = useState<File | null>(null);
   const [substackFile, setSubstackFile] = useState<File | null>(null);
@@ -35,6 +41,49 @@ export default function Home() {
   const [isScraping, setIsScraping] = useState(false);
   const [scrapedContent, setScrapedContent] = useState<string>('');
 
+  // Google Places scraper state
+  const [placesQuery, setPlacesQuery] = useState('');
+  const [placesLocation, setPlacesLocation] = useState('');
+  const [placesMaxResults, setPlacesMaxResults] = useState(20);
+  const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
+  const [placesResults, setPlacesResults] = useState<any[]>([]);
+  const [selectedPlaces, setSelectedPlaces] = useState<Set<string>>(new Set());
+  const [isCreatingLeadsFromPlaces, setIsCreatingLeadsFromPlaces] = useState(false);
+  const [placesSearchHistory, setPlacesSearchHistory] = useState<Array<{query: string, location: string, timestamp: number}>>([]);
+  const [dismissedPlaces, setDismissedPlaces] = useState<Set<string>>(new Set());
+  const [dismissedLeadsList, setDismissedLeadsList] = useState<any[]>([]);
+  const [openLeadsList, setOpenLeadsList] = useState<any[]>([]);
+  const [promotedLeadsList, setPromotedLeadsList] = useState<any[]>([]);
+  const [existingPlaceIds, setExistingPlaceIds] = useState<Set<string>>(new Set());
+  const [openPlaceIds, setOpenPlaceIds] = useState<Set<string>>(new Set());
+  
+  // Filters for Open tab
+  const [openFilterQuery, setOpenFilterQuery] = useState('');
+  const [openFilterDateFrom, setOpenFilterDateFrom] = useState('');
+  const [openFilterDateTo, setOpenFilterDateTo] = useState('');
+  
+  const [showDismissDialog, setShowDismissDialog] = useState(false);
+  const [placeToDissmiss, setPlaceToDissmiss] = useState<any>(null);
+  const [dismissReason, setDismissReason] = useState('');
+  const [googlePlacesView, setGooglePlacesView] = useState<'search' | 'open' | 'dismissed' | 'promoted'>('search');
+  const [currentCampaign, setCurrentCampaign] = useState<any>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [allFetchedPlaces, setAllFetchedPlaces] = useState<any[]>([]); // All places from all pages
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Load search history from localStorage on mount
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('placesSearchHistory');
+    if (savedHistory) {
+      try {
+        setPlacesSearchHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error('Failed to parse search history:', e);
+      }
+    }
+  }, []);
+
   const runAnalysis = async () => {
     if (!prospectName.trim()) {
       setError('Please enter a prospect name');
@@ -48,6 +97,10 @@ export default function Home() {
       const formData = new FormData();
       formData.append('prospectName', prospectName);
       if (company) formData.append('company', company);
+      if (email) formData.append('email', email);
+      if (igHandle) formData.append('igHandle', igHandle);
+      if (websiteUrl) formData.append('websiteUrl', websiteUrl);
+      if (uploadedProfilePicUrl) formData.append('profilePictureUrl', uploadedProfilePicUrl);
       if (websiteData) formData.append('websiteData', websiteData);
       if (igFile) formData.append('igFile', igFile);
       if (substackFile) formData.append('substackFile', substackFile);
@@ -74,6 +127,20 @@ export default function Home() {
       setAnalysisResults(data);
       setCurrentTab('results');
       
+      // Clear form fields
+      setProspectName('');
+      setCompany('');
+      setEmail('');
+      setIgHandle('');
+      setWebsiteUrl('');
+      setProfilePictureUrl('');
+      setUploadedProfilePicUrl('');
+      setWebsiteData('');
+      setIgFile(null);
+      setSubstackFile(null);
+      setThreadsFile(null);
+      setOtherFile(null);
+      
       // Refresh leads
       fetchLeads();
     } catch (err) {
@@ -92,6 +159,146 @@ export default function Home() {
       }
     } catch (err) {
       console.error('Failed to fetch leads:', err);
+    }
+  };
+
+  const fetchCampaigns = async () => {
+    if (!userEmail) return;
+    
+    try {
+      const response = await fetch(`/api/campaigns?userId=${userEmail}`);
+      const data = await response.json();
+      if (response.ok) {
+        setCampaigns(data.campaigns || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch campaigns:', err);
+    }
+  };
+
+  const fetchDismissedLeads = async () => {
+    if (!userEmail) return;
+    
+    try {
+      const response = await fetch(`/api/dismissed?userId=${userEmail}`);
+      const data = await response.json();
+      if (response.ok) {
+        const dismissedIds = new Set(data.dismissed.map((d: any) => d.place_id));
+        setDismissedPlaces(dismissedIds);
+        setDismissedLeadsList(data.dismissed);
+      }
+    } catch (err) {
+      console.error('Failed to fetch dismissed leads:', err);
+    }
+  };
+
+  const openDismissDialog = (place: any) => {
+    setPlaceToDissmiss(place);
+    setDismissReason('');
+    setShowDismissDialog(true);
+  };
+
+  const dismissPlace = async () => {
+    if (!userEmail || !placeToDissmiss) return;
+    
+    try {
+      const response = await fetch('/api/dismissed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userEmail,
+          campaignId: currentCampaign?.id,
+          placeId: placeToDissmiss.id,
+          placeName: placeToDissmiss.name,
+          website: placeToDissmiss.website,
+          address: placeToDissmiss.address,
+          phone: placeToDissmiss.phone,
+          reason: dismissReason.trim() || null,
+        }),
+      });
+
+      if (response.ok) {
+        setDismissedPlaces(new Set([...dismissedPlaces, placeToDissmiss.id]));
+        // Remove from selected if it was selected
+        const newSelected = new Set(selectedPlaces);
+        newSelected.delete(placeToDissmiss.id);
+        setSelectedPlaces(newSelected);
+        // Refresh dismissed list
+        fetchDismissedLeads();
+        // Refresh open leads to remove dismissed item
+        fetchOpenLeads();
+        // Close dialog
+        setShowDismissDialog(false);
+        setPlaceToDissmiss(null);
+        setDismissReason('');
+      }
+    } catch (err) {
+      console.error('Failed to dismiss place:', err);
+    }
+  };
+
+  const fetchOpenLeads = async () => {
+    if (!userEmail) return;
+    
+    try {
+      const response = await fetch(`/api/open?userId=${userEmail}`);
+      const data = await response.json();
+      if (response.ok) {
+        setOpenLeadsList(data.openLeads);
+      }
+    } catch (err) {
+      console.error('Failed to fetch open leads:', err);
+    }
+  };
+
+  const fetchPromotedLeads = async () => {
+    if (!userEmail) return;
+    
+    try {
+      const response = await fetch(`/api/promoted?userId=${userEmail}`);
+      const data = await response.json();
+      if (response.ok) {
+        setPromotedLeadsList(data.promoted);
+      }
+    } catch (err) {
+      console.error('Failed to fetch promoted leads:', err);
+    }
+  };
+
+  const fetchExistingPlaceIds = async () => {
+    if (!userEmail) return;
+    
+    try {
+      const response = await fetch(`/api/existing-places?userId=${userEmail}`);
+      const data = await response.json();
+      if (response.ok) {
+        setExistingPlaceIds(new Set(data.existingPlaceIds));
+        setOpenPlaceIds(new Set(data.openPlaceIds));
+      }
+    } catch (err) {
+      console.error('Failed to fetch existing place IDs:', err);
+    }
+  };
+
+  const saveSearchResultsToOpen = async (places: any[], query: string, location: string) => {
+    if (!userEmail || places.length === 0) return;
+    
+    try {
+      await fetch('/api/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userEmail,
+          campaignId: currentCampaign?.id,
+          places: places,
+          searchQuery: query,
+          searchLocation: location,
+        }),
+      });
+      // Refresh existing place IDs after saving
+      await fetchExistingPlaceIds();
+    } catch (err) {
+      console.error('Failed to save to open leads:', err);
     }
   };
 
@@ -136,6 +343,7 @@ export default function Home() {
           leadId: analysisResults.leadId,
           emailType: 'initial',
           template: emailTemplate || undefined,
+          regenerate: true, // Allow overwriting existing email
         }),
       });
 
@@ -234,6 +442,271 @@ export default function Home() {
     }
   };
 
+  const searchPlaces = async (loadMore = false) => {
+    if (!placesQuery.trim()) {
+      setError('Please enter a search query (e.g., "yoga studio", "coffee shop")');
+      return;
+    }
+
+    setIsSearchingPlaces(true);
+    setError(null);
+    
+    // Clear results IMMEDIATELY for new searches
+    if (!loadMore) {
+      setPlacesResults([]);
+      setAllFetchedPlaces([]);
+      setSelectedPlaces(new Set());
+      setCurrentPage(1);
+      setNextPageToken(null);
+    }
+    
+    // Fetch existing place IDs before search
+    if (!loadMore) {
+      await fetchExistingPlaceIds();
+    }
+
+    try {
+      const response = await fetch('/api/places/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: placesQuery,
+          location: placesLocation,
+          maxResults: placesMaxResults,
+          pageToken: null, // Pagination disabled with duplicate filtering
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to search places');
+      }
+
+      let newPlaces = data.places || [];
+      
+      // Filter out places that already exist in Open, Dismissed, or Promoted
+      const filteredNewPlaces = newPlaces.filter((place: any) => 
+        !existingPlaceIds.has(place.id)
+      );
+      
+      console.log('Search results:', {
+        totalFromAPI: newPlaces.length,
+        newPlaces: filteredNewPlaces.length,
+        filtered: newPlaces.length - filteredNewPlaces.length,
+        loadMore,
+        nextPageToken: data.nextPageToken,
+      });
+      
+      // Save ALL results to Open area (including ones we'll filter from display)
+      if (newPlaces.length > 0) {
+        await saveSearchResultsToOpen(newPlaces, placesQuery, placesLocation);
+      }
+      
+      // But only display NEW results
+      if (loadMore) {
+        // Filter out duplicates by place ID before appending
+        const existingIds = new Set(placesResults.map(p => p.id));
+        const uniqueNewPlaces = filteredNewPlaces.filter((p: any) => !existingIds.has(p.id));
+        
+        setPlacesResults([...placesResults, ...uniqueNewPlaces]);
+        setAllFetchedPlaces([...allFetchedPlaces, ...uniqueNewPlaces]);
+        setCurrentPage(currentPage + 1);
+      } else {
+        setPlacesResults(filteredNewPlaces);
+        setAllFetchedPlaces(filteredNewPlaces);
+      }
+      
+      // Clear next page token since we don't support pagination with duplicate filtering
+      setNextPageToken(null);
+      
+      if (data.cached) {
+        console.log(`💰 Using cached results (${data.cacheAge} min old) - Saved API cost!`);
+      }
+      
+      // Create or update campaign
+      if (userEmail && newPlaces.length > 0) {
+        const campaignResponse = await fetch('/api/campaigns', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userEmail,
+            searchQuery: placesQuery,
+            location: placesLocation,
+            totalFetched: newPlaces.length,
+          }),
+        });
+        
+        if (campaignResponse.ok) {
+          const campaignData = await campaignResponse.json();
+          setCurrentCampaign(campaignData.campaign);
+        }
+      }
+      
+      // Save to search history (only on new search, not on load more)
+      if (!loadMore) {
+        const newHistoryItem = {
+          query: placesQuery,
+          location: placesLocation,
+          timestamp: Date.now()
+        };
+        
+        // Add to history, remove duplicates, keep last 10
+        const updatedHistory = [
+          newHistoryItem,
+          ...placesSearchHistory.filter(h => 
+            !(h.query === placesQuery && h.location === placesLocation)
+          )
+        ].slice(0, 10);
+      
+        setPlacesSearchHistory(updatedHistory);
+        localStorage.setItem('placesSearchHistory', JSON.stringify(updatedHistory));
+      }
+      
+      if (!loadMore && filteredNewPlaces.length === 0 && newPlaces.length > 0) {
+        setError(`No new results. All ${newPlaces.length} results already in Open, Dismissed, or Promoted tabs.`);
+      } else if (!loadMore && newPlaces.length === 0) {
+        setError('No places found with websites. Try a different search.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to search places');
+    } finally {
+      setIsSearchingPlaces(false);
+    }
+  };
+
+  const createLeadsFromPlaces = async () => {
+    if (selectedPlaces.size === 0) {
+      setError('Please select at least one place to create leads');
+      return;
+    }
+
+    setIsCreatingLeadsFromPlaces(true);
+    setError(null);
+
+    try {
+      const selectedPlacesData = placesResults.filter(place => 
+        selectedPlaces.has(place.id)
+      );
+
+      let createdCount = 0;
+      let failedCount = 0;
+
+      for (const place of selectedPlacesData) {
+        try {
+          const response = await fetch('/api/leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: place.name,
+              company: place.name,
+              website: place.website,
+              status: 'lead_collected',
+              notes: `Source: Google Places\nAddress: ${place.address}\nPhone: ${place.phone}\nRating: ${place.rating} (${place.userRatingCount} reviews)\nGoogle Maps: ${place.googleMapsUri}`,
+            }),
+          });
+
+          if (response.ok) {
+            const leadData = await response.json();
+            createdCount++;
+            
+            // Add to promoted_leads table
+            await fetch('/api/promoted', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: userEmail,
+                campaignId: currentCampaign?.id || null,
+                placeId: place.id,
+                placeName: place.name,
+                website: place.website,
+                address: place.address,
+                phone: place.phone,
+                rating: place.rating,
+                userRatingCount: place.userRatingCount,
+                googleMapsUri: place.googleMapsUri,
+                searchQuery: placesQuery,
+                searchLocation: placesLocation,
+                leadId: leadData.lead?.id || null,
+              }),
+            });
+          } else {
+            failedCount++;
+          }
+        } catch (err) {
+          failedCount++;
+        }
+      }
+
+      // Refresh leads list and promoted leads
+      await fetchLeads();
+      await fetchPromotedLeads();
+      
+      // Clear selection and show success
+      setSelectedPlaces(new Set());
+      alert(`Successfully created ${createdCount} leads${failedCount > 0 ? `. ${failedCount} failed.` : '!'}`);
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create leads');
+    } finally {
+      setIsCreatingLeadsFromPlaces(false);
+    }
+  };
+
+  const isPlaceAlreadyLead = (place: any) => {
+    return leads.some(lead => {
+      // Check by website URL (most reliable)
+      if (place.website && lead.website_url) {
+        const normalizeUrl = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').toLowerCase();
+        const placeUrl = normalizeUrl(place.website);
+        const leadUrl = normalizeUrl(lead.website_url);
+        console.log(`Comparing URLs: place="${placeUrl}" vs lead="${leadUrl}" (${lead.company})`);
+        if (placeUrl === leadUrl) {
+          return true;
+        }
+      }
+      // Check by exact company name match
+      if (place.name && lead.company) {
+        const placeName = place.name.toLowerCase();
+        const leadName = lead.company.toLowerCase();
+        console.log(`Comparing names: place="${placeName}" vs lead="${leadName}"`);
+        if (placeName === leadName) {
+          return true;
+        }
+      }
+      return false;
+    });
+  };
+
+  const togglePlaceSelection = (placeId: string) => {
+    const place = placesResults.find(p => p.id === placeId);
+    if (place && isPlaceAlreadyLead(place)) {
+      // Don't allow selection of places that are already leads
+      return;
+    }
+    
+    const newSelection = new Set(selectedPlaces);
+    if (newSelection.has(placeId)) {
+      newSelection.delete(placeId);
+    } else {
+      newSelection.add(placeId);
+    }
+    setSelectedPlaces(newSelection);
+  };
+
+  const toggleAllPlaces = () => {
+    // Only select places that aren't already leads or dismissed
+    const selectablePlaces = placesResults.filter(p => 
+      !isPlaceAlreadyLead(p) && !dismissedPlaces.has(p.id)
+    );
+    
+    if (selectedPlaces.size === selectablePlaces.length) {
+      setSelectedPlaces(new Set());
+    } else {
+      setSelectedPlaces(new Set(selectablePlaces.map(p => p.id)));
+    }
+  };
+
   const downloadScrapedContent = () => {
     const blob = new Blob([scrapedContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -247,10 +720,14 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  // Fetch leads when CRM tab is opened
+  // Fetch leads when CRM or Google Places tab is opened
   useEffect(() => {
-    if (currentTab === 'crm') {
+    if (currentTab === 'crm' || currentTab === 'google-places') {
       fetchLeads();
+    }
+    if (currentTab === 'google-places') {
+      fetchCampaigns();
+      fetchDismissedLeads();
     }
   }, [currentTab]);
 
@@ -272,7 +749,22 @@ export default function Home() {
 
         <nav className="flex-1 p-4 space-y-1">
           <button 
-            onClick={() => setCurrentTab('new-analysis')}
+            onClick={() => {
+              setCurrentTab('new-analysis');
+              // Clear form fields when clicking New Analysis
+              setProspectName('');
+              setCompany('');
+              setEmail('');
+              setIgHandle('');
+              setWebsiteUrl('');
+              setProfilePictureUrl('');
+              setUploadedProfilePicUrl('');
+              setWebsiteData('');
+              setIgFile(null);
+              setSubstackFile(null);
+              setThreadsFile(null);
+              setOtherFile(null);
+            }}
             className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
               currentTab === 'new-analysis' || currentTab === 'results' 
                 ? 'bg-indigo-50 text-indigo-700' 
@@ -326,6 +818,79 @@ export default function Home() {
             <FileText className="w-5 h-5" />
             Website Scraper
           </button>
+          
+          {/* Google Places with submenu */}
+          <div className="space-y-1">
+            <button 
+              onClick={() => {
+                setCurrentTab('google-places');
+                setGooglePlacesView('search');
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                currentTab === 'google-places' 
+                  ? 'bg-indigo-50 text-indigo-700' 
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Globe className="w-5 h-5" />
+              Google Places
+            </button>
+            
+            {/* Submenu items - only show when Google Places is active */}
+            {currentTab === 'google-places' && (
+              <div className="ml-4 space-y-1 border-l-2 border-indigo-200 pl-2">
+                <button
+                  onClick={() => setGooglePlacesView('search')}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    googlePlacesView === 'search'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Search
+                </button>
+                <button
+                  onClick={() => {
+                    setGooglePlacesView('open');
+                    fetchOpenLeads();
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    googlePlacesView === 'open'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Open {openLeadsList.length > 0 && `(${openLeadsList.length})`}
+                </button>
+                <button
+                  onClick={() => {
+                    setGooglePlacesView('dismissed');
+                    fetchDismissedLeads();
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    googlePlacesView === 'dismissed'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Dismissed {dismissedLeadsList.length > 0 && `(${dismissedLeadsList.length})`}
+                </button>
+                <button
+                  onClick={() => {
+                    setGooglePlacesView('promoted');
+                    fetchPromotedLeads();
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    googlePlacesView === 'promoted'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Promoted {promotedLeadsList.length > 0 && `(${promotedLeadsList.length})`}
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="p-4 border-t border-slate-100">
@@ -370,20 +935,103 @@ export default function Home() {
                   <Users className="w-4 h-4 text-indigo-500" /> Basic Info
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input 
-                    type="text" 
-                    placeholder="Prospect Name (e.g. Sarah Jones)" 
-                    value={prospectName}
-                    onChange={(e) => setProspectName(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Company / Brand Name" 
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
-                  />
+                  <div className="relative">
+                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Prospect Name (e.g. Sarah Jones)" 
+                      value={prospectName}
+                      onChange={(e) => setProspectName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Company / Brand Name" 
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="email" 
+                      placeholder="Email address" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    />
+                  </div>
+                  <div className="relative">
+                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Instagram handle (e.g. @username)" 
+                      value={igHandle}
+                      onChange={(e) => setIgHandle(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Website URL" 
+                      value={websiteUrl}
+                      onChange={(e) => setWebsiteUrl(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Upload className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Profile Picture URL (paste IG image URL + Enter)" 
+                      value={profilePictureUrl}
+                      onChange={(e) => setProfilePictureUrl(e.target.value)}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter' && profilePictureUrl.trim() && !isUploadingProfilePic) {
+                          e.preventDefault();
+                          setIsUploadingProfilePic(true);
+                          
+                          try {
+                            // Download and upload the image
+                            const response = await fetch('/api/leads/profile-picture', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ 
+                                imageUrl: profilePictureUrl,
+                                prospectName: prospectName || 'temp'
+                              }),
+                            });
+                            
+                            if (response.ok) {
+                              const data = await response.json();
+                              setUploadedProfilePicUrl(data.publicUrl);
+                              setProfilePictureUrl(''); // Clear input
+                            }
+                          } catch (err) {
+                            console.error('Failed to upload profile picture:', err);
+                          } finally {
+                            setIsUploadingProfilePic(false);
+                          }
+                        }
+                      }}
+                      disabled={isUploadingProfilePic}
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm disabled:opacity-50"
+                    />
+                  </div>
+                  {isUploadingProfilePic && (
+                    <div className="col-span-2 text-xs text-indigo-600">Uploading profile picture...</div>
+                  )}
+                  {uploadedProfilePicUrl && (
+                    <div className="col-span-2">
+                      <img src={uploadedProfilePicUrl} alt="Profile" className="w-16 h-16 rounded-full object-cover border-2 border-indigo-200" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -417,8 +1065,31 @@ export default function Home() {
                       placeholder="Paste raw text scraped from their website here..." 
                       value={websiteData}
                       onChange={(e) => setWebsiteData(e.target.value)}
-                      className="w-full h-32 px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 text-sm resize-none"
+                      className="w-full h-24 px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 text-sm resize-none"
                     />
+                    <div className="mt-3 text-center text-xs text-slate-500">or</div>
+                    <div className="mt-3 border-2 border-dashed border-slate-200 rounded-lg p-4 text-center hover:bg-slate-50 transition-colors cursor-pointer">
+                      <input 
+                        type="file" 
+                        accept=".txt"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              setWebsiteData(event.target?.result as string);
+                            };
+                            reader.readAsText(file);
+                          }
+                        }}
+                        className="hidden" 
+                        id="website-file"
+                      />
+                      <label htmlFor="website-file" className="cursor-pointer block">
+                        <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                        <p className="text-xs font-medium text-slate-700">Upload .txt file</p>
+                      </label>
+                    </div>
                   </div>
                 </div>
 
@@ -567,24 +1238,6 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-
-                  <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 shadow-sm">
-                    <h3 className="font-bold text-amber-900 text-sm mb-3">Your Workflow</h3>
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-3 text-sm text-amber-800 cursor-pointer">
-                        <input type="checkbox" className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"/>
-                        <span>Build Gemini Website</span>
-                      </label>
-                      <label className="flex items-center gap-3 text-sm text-amber-800 cursor-pointer">
-                        <input type="checkbox" className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"/>
-                        <span>Create PDF w/ Screenshots</span>
-                      </label>
-                      <label className="flex items-center gap-3 text-sm text-amber-800 cursor-pointer">
-                        <input type="checkbox" className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"/>
-                        <span>Review Email Draft</span>
-                      </label>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="lg:col-span-2 space-y-6">
@@ -620,22 +1273,6 @@ Best,
                         {isRegeneratingEmail ? 'Regenerating...' : 'Regenerate'}
                       </button>
                       <button className="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded shadow-sm">Send to Gmail</button>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm opacity-75 hover:opacity-100 transition-opacity">
-                    <div className="p-4 border-b border-slate-100">
-                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-orange-500" /> Follow-up Draft (Day +3)
-                      </h3>
-                    </div>
-                    <div className="p-6">
-                      <p className="text-sm text-slate-600 leading-relaxed font-mono">
-                        Hi {prospectName.split(' ')[0]},<br/><br/>
-                        Just floating this to the top of your inbox. I know things can make weeks crazy.<br/><br/>
-                        Did you get a chance to peek at the PDF? I think the &quot;Story&quot; section I mocked up really nails your vibe.<br/><br/>
-                        Cheers,<br/>[Your Name]
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -751,12 +1388,16 @@ Best,
                           </td>
                           <td className="px-6 py-4 cursor-pointer" onClick={() => router.push(`/lead/${lead.id}`)}>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              lead.status === 'analysis_done' ? 'bg-blue-100 text-blue-800' :
-                              lead.status === 'pdf_sent' ? 'bg-purple-100 text-purple-800' :
-                              lead.status === 'site_live' ? 'bg-yellow-100 text-yellow-800' :
-                              lead.status === 'follow_up_sent' ? 'bg-orange-100 text-orange-800' :
-                              lead.status === 'closed_won' ? 'bg-green-100 text-green-800' :
-                              lead.status === 'closed_lost' ? 'bg-red-100 text-red-800' :
+                              lead.status === 'email_1_sent' ? 'bg-blue-100 text-blue-800' :
+                              lead.status === 'email_2_sent' ? 'bg-indigo-100 text-indigo-800' :
+                              lead.status === 'email_3_sent' ? 'bg-purple-100 text-purple-800' :
+                              lead.status === 'replied_not_fit' ? 'bg-orange-100 text-orange-800' :
+                              lead.status === 'replied_interested' ? 'bg-cyan-100 text-cyan-800' :
+                              lead.status === 'call_booked' ? 'bg-teal-100 text-teal-800' :
+                              lead.status === 'call_done_thinking' ? 'bg-yellow-100 text-yellow-800' :
+                              lead.status === 'won' ? 'bg-green-100 text-green-800' :
+                              lead.status === 'lost' ? 'bg-red-100 text-red-800' :
+                              lead.status === 'site_live' ? 'bg-violet-100 text-violet-800' :
                               'bg-slate-100 text-slate-800'
                             }`}>
                               {lead.status.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -817,12 +1458,12 @@ Best,
                   <Sparkles className="w-5 h-5 text-indigo-500" /> Custom Email Template
                 </h3>
                 <p className="text-sm text-slate-600 mb-4">
-                  Use placeholders: <code className="bg-slate-100 px-2 py-1 rounded text-xs">[Name]</code>, <code className="bg-slate-100 px-2 py-1 rounded text-xs">[Company]</code>, <code className="bg-slate-100 px-2 py-1 rounded text-xs">[StoryArc]</code>, <code className="bg-slate-100 px-2 py-1 rounded text-xs">[Tone]</code>
+                  Use placeholders: <code className="bg-slate-100 px-2 py-1 rounded text-xs">[name]</code>, <code className="bg-slate-100 px-2 py-1 rounded text-xs">[topic]</code>
                 </p>
                 <textarea
                   value={emailTemplate}
                   onChange={(e) => setEmailTemplate(e.target.value)}
-                  placeholder="Hi [Name],\n\nI've been following your journey on [Platform]... especially your recent series on [StoryArc]...\n\nYour tone is [Tone], which really stands out.\n\nBest,\n[Your Name]"
+                  placeholder="Hi [name],\n\nI came across your post about [topic] and it really stood out.\n\nQuick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\n\nI help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\n\nIf you want, I can take a quick look and tell you exactly where the bottleneck is.\n\nWould that be useful?\n\nCheers,"
                   className="w-full h-64 px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-mono resize-none"
                 />
                 <div className="mt-4 flex justify-end gap-2">
@@ -1086,8 +1727,936 @@ Let me know what you think.
               </div>
             </div>
           )}
+
+          {/* Google Places Scraper View */}
+          {currentTab === 'google-places' && (
+            <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
+              
+              {/* Search View */}
+              {googlePlacesView === 'search' && (
+                <>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Google Places Lead Finder</h1>
+                <p className="text-slate-500 mt-1">Search for businesses by keyword and location. Only businesses with websites will be shown.</p>
+              </div>
+
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                {/* Search History */}
+                {placesSearchHistory.length > 0 && (
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                    <h3 className="text-sm font-semibold text-indigo-900 mb-2 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Recent Searches (click to repeat)
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {placesSearchHistory.map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setPlacesQuery(item.query);
+                            setPlacesLocation(item.location);
+                          }}
+                          className="px-3 py-1.5 bg-white border border-indigo-300 rounded-lg text-xs text-indigo-700 hover:bg-indigo-100 hover:border-indigo-400 transition-colors flex items-center gap-2"
+                        >
+                          <span className="font-medium">{item.query}</span>
+                          {item.location && <span className="text-indigo-500">in {item.location}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Business Type / Keyword *
+                    </label>
+                    <input
+                      type="text"
+                      value={placesQuery}
+                      onChange={(e) => setPlacesQuery(e.target.value)}
+                      placeholder="e.g., yoga studio, coffee shop, dentist, real estate agent"
+                      className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      What type of business are you looking for?
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Location (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={placesLocation}
+                      onChange={(e) => setPlacesLocation(e.target.value)}
+                      placeholder="e.g., New York, Los Angeles, Chicago"
+                      className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Leave empty to search everywhere
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Results per Page
+                    </label>
+                    <select
+                      value={placesMaxResults}
+                      onChange={(e) => setPlacesMaxResults(Number(e.target.value))}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                      <option value={5}>5 per page</option>
+                      <option value={10}>10 per page</option>
+                      <option value={15}>15 per page</option>
+                      <option value={20}>20 per page (max)</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Google API limit: 20 per request. Use "Load More" for additional results.
+                    </p>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => searchPlaces(false)}
+                  disabled={isSearchingPlaces || !placesQuery.trim()}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 disabled:bg-indigo-400 disabled:cursor-not-allowed"
+                >
+                  {isSearchingPlaces ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Searching Google Places...
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="w-5 h-5" />
+                      Search Places
+                    </>
+                  )}
+                </button>
+
+                {placesResults.length > 0 && (
+                  <div className="space-y-4 mt-6">
+                    {/* Campaign Stats */}
+                    {currentCampaign && (
+                      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold text-indigo-900 text-sm">
+                              Campaign: "{currentCampaign.search_query}"
+                              {currentCampaign.location && ` in ${currentCampaign.location}`}
+                            </h4>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-indigo-700">
+                              <span>📊 Fetched: {currentCampaign.total_fetched}</span>
+                              <span>❌ Dismissed: {currentCampaign.total_dismissed}</span>
+                              <span>✅ Converted: {currentCampaign.total_converted}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-700">
+                          Showing {placesResults.length} Places with Websites
+                          {currentPage > 1 && <span className="text-slate-500 font-normal">(Page {currentPage})</span>}
+                        </h3>
+                        <span className="text-xs text-slate-500">
+                          ({selectedPlaces.size} selected)
+                        </span>
+                        {placesResults.filter(p => isPlaceAlreadyLead(p)).length > 0 && (
+                          <span className="text-xs text-green-600 font-medium">
+                            • {placesResults.filter(p => isPlaceAlreadyLead(p)).length} already in CRM
+                          </span>
+                        )}
+                        {placesResults.filter(p => dismissedPlaces.has(p.id)).length > 0 && (
+                          <span className="text-xs text-red-600 font-medium">
+                            • {placesResults.filter(p => dismissedPlaces.has(p.id)).length} dismissed
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={toggleAllPlaces}
+                          className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                        >
+                          {selectedPlaces.size === placesResults.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                        <button
+                          onClick={createLeadsFromPlaces}
+                          disabled={selectedPlaces.size === 0 || isCreatingLeadsFromPlaces}
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 disabled:bg-green-400 disabled:cursor-not-allowed"
+                        >
+                          {isCreatingLeadsFromPlaces ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Creating...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              Create {selectedPlaces.size} Lead{selectedPlaces.size !== 1 ? 's' : ''}
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {placesResults.map((place) => {
+                        const alreadyLead = isPlaceAlreadyLead(place);
+                        const isDismissed = dismissedPlaces.has(place.id);
+                        const isInOpen = openPlaceIds.has(place.id);
+                        return (
+                        <div
+                          key={place.id}
+                          className={`border rounded-lg p-4 transition-all ${
+                            isDismissed
+                              ? 'border-red-200 bg-red-50 opacity-60'
+                              : alreadyLead
+                              ? 'border-green-300 bg-green-50 opacity-75'
+                              : selectedPlaces.has(place.id)
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-slate-200 hover:border-slate-300 bg-white'
+                          }`}
+                        >
+                          {/* Top Right: Query/Date Info */}
+                          <div className="flex items-start justify-between gap-4 mb-3">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div 
+                                className="flex-shrink-0 mt-1 cursor-pointer"
+                                onClick={() => !alreadyLead && !isDismissed && togglePlaceSelection(place.id)}
+                              >
+                                {isDismissed ? (
+                                  <div className="w-5 h-5 rounded border-2 border-red-400 bg-red-400 flex items-center justify-center">
+                                    <X className="w-3 h-3 text-white" />
+                                  </div>
+                                ) : alreadyLead ? (
+                                  <div className="w-5 h-5 rounded border-2 border-green-600 bg-green-600 flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-white" />
+                                  </div>
+                                ) : (
+                                  <div
+                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                      selectedPlaces.has(place.id)
+                                        ? 'bg-indigo-600 border-indigo-600'
+                                        : 'border-slate-300'
+                                    }`}
+                                  >
+                                    {selectedPlaces.has(place.id) && (
+                                      <Check className="w-3 h-3 text-white" />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-semibold text-slate-900">{place.name}</h4>
+                                  {isInOpen && !isDismissed && !alreadyLead && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                      Open
+                                    </span>
+                                  )}
+                                  {isDismissed && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                      <X className="w-3 h-3" />
+                                      Dismissed
+                                    </span>
+                                  )}
+                                  {alreadyLead && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                      <CheckCircle className="w-3 h-3" />
+                                      Already a Lead
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-slate-600 mt-1">{place.address}</p>
+                                {place.phone && (
+                                  <p className="text-sm text-slate-500 mt-1">📞 {place.phone}</p>
+                                )}
+                                {place.rating > 0 && (
+                                  <p className="text-sm text-amber-600 mt-1">
+                                    ⭐ {place.rating.toFixed(1)} ({place.userRatingCount} reviews)
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            {/* Query/Date on top right */}
+                            <div className="text-right text-xs text-slate-500 flex-shrink-0">
+                              <div>query: {placesQuery}</div>
+                              {placesLocation && <div>{placesLocation}</div>}
+                              <div>date: {new Date().toLocaleDateString('en-GB')}</div>
+                            </div>
+                          </div>
+                          
+                          {/* Bottom: Links and Dismiss */}
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <a
+                                href={place.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+                              >
+                                <Globe className="w-4 h-4" />
+                                Visit Website
+                              </a>
+                              {place.googleMapsUri && (
+                                <a
+                                  href={place.googleMapsUri}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-sm text-slate-600 hover:text-slate-700 font-medium flex items-center gap-1"
+                                >
+                                  <Globe className="w-4 h-4" />
+                                  Google Maps
+                                </a>
+                              )}
+                            </div>
+                            {!alreadyLead && !isDismissed && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openDismissDialog(place);
+                                }}
+                                className="text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
+                              >
+                                <X className="w-4 h-4" />
+                                Dismiss
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Info message */}
+                    {placesResults.length === 0 && !isSearchingPlaces && (
+                      <div className="text-center text-sm text-slate-500 pt-4">
+                        All results from this search are already in Open, Dismissed, or Promoted tabs.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 text-sm mb-2">How it works:</h3>
+                <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                  <li>Searches Google Places API for businesses matching your criteria</li>
+                  <li>Only shows businesses that have a website URL</li>
+                  <li>View business details including address, phone, ratings, and reviews</li>
+                  <li>Select multiple businesses and create leads in bulk</li>
+                  <li>Each lead includes all business info in the notes field</li>
+                  <li>Leads are created with "new" status and can be managed in the CRM tab</li>
+                </ul>
+                <p className="text-xs text-blue-700 mt-3 font-medium">
+                  💡 Tip: Be specific with your search. "yoga studio" is better than just "yoga"
+                </p>
+              </div>
+                </>
+              )}
+
+              {/* Open Leads View */}
+              {googlePlacesView === 'open' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+                    <div className="px-6 py-4 border-b border-slate-200">
+                      <h1 className="text-2xl font-bold text-slate-900">Open Leads</h1>
+                      <p className="text-slate-600 mt-1">All businesses shown to you that haven't been dismissed or converted to leads</p>
+                    </div>
+
+                    <div className="p-6">
+                      {openLeadsList.length === 0 ? (
+                        <div className="text-center py-12">
+                          <Database className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold text-slate-700 mb-2">No Open Leads</h3>
+                          <p className="text-slate-500">Search for places to see them appear here.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Filters */}
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                            <h3 className="text-sm font-semibold text-slate-700 mb-3">Filter Leads</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Search Query</label>
+                                <input
+                                  type="text"
+                                  placeholder="Filter by query..."
+                                  value={openFilterQuery}
+                                  onChange={(e) => setOpenFilterQuery(e.target.value)}
+                                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Date From</label>
+                                <input
+                                  type="date"
+                                  value={openFilterDateFrom}
+                                  onChange={(e) => setOpenFilterDateFrom(e.target.value)}
+                                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Date To</label>
+                                <input
+                                  type="date"
+                                  value={openFilterDateTo}
+                                  onChange={(e) => setOpenFilterDateTo(e.target.value)}
+                                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                            </div>
+                            {(openFilterQuery || openFilterDateFrom || openFilterDateTo) && (
+                              <button
+                                onClick={() => {
+                                  setOpenFilterQuery('');
+                                  setOpenFilterDateFrom('');
+                                  setOpenFilterDateTo('');
+                                }}
+                                className="mt-3 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                              >
+                                Clear Filters
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm text-slate-600">
+                              Showing {openLeadsList.filter(lead => {
+                                // Apply filters
+                                if (openFilterQuery && !lead.search_query?.toLowerCase().includes(openFilterQuery.toLowerCase())) {
+                                  return false;
+                                }
+                                if (openFilterDateFrom && lead.search_date) {
+                                  const leadDate = new Date(lead.search_date).setHours(0,0,0,0);
+                                  const filterDate = new Date(openFilterDateFrom).setHours(0,0,0,0);
+                                  if (leadDate < filterDate) return false;
+                                }
+                                if (openFilterDateTo && lead.search_date) {
+                                  const leadDate = new Date(lead.search_date).setHours(0,0,0,0);
+                                  const filterDate = new Date(openFilterDateTo).setHours(0,0,0,0);
+                                  if (leadDate > filterDate) return false;
+                                }
+                                return true;
+                              }).length} of {openLeadsList.length} leads
+                              <span className="text-xs text-slate-500 ml-2">({selectedPlaces.size} selected)</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  if (selectedPlaces.size === openLeadsList.length) {
+                                    setSelectedPlaces(new Set());
+                                  } else {
+                                    setSelectedPlaces(new Set(openLeadsList.map(l => l.place_id)));
+                                  }
+                                }}
+                                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                              >
+                                {selectedPlaces.size === openLeadsList.length ? 'Deselect All' : 'Select All'}
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (selectedPlaces.size === 0) return;
+                                  setIsCreatingLeadsFromPlaces(true);
+                                  let createdCount = 0;
+                                  for (const lead of openLeadsList.filter(l => selectedPlaces.has(l.place_id))) {
+                                    try {
+                                      const response = await fetch('/api/leads', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          name: lead.place_name,
+                                          company: lead.place_name,
+                                          website: lead.website,
+                                          status: 'lead_collected',
+                                          notes: `Source: Google Places\nAddress: ${lead.address}\nPhone: ${lead.phone}\nRating: ${lead.rating} (${lead.user_rating_count} reviews)\nGoogle Maps: ${lead.google_maps_uri}`,
+                                        }),
+                                      });
+                                      if (response.ok) {
+                                        const leadData = await response.json();
+                                        await fetch('/api/promoted', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            userId: userEmail,
+                                            campaignId: currentCampaign?.id || null,
+                                            placeId: lead.place_id,
+                                            placeName: lead.place_name,
+                                            website: lead.website,
+                                            address: lead.address,
+                                            phone: lead.phone,
+                                            rating: lead.rating,
+                                            userRatingCount: lead.user_rating_count,
+                                            googleMapsUri: lead.google_maps_uri,
+                                            searchQuery: lead.search_query,
+                                            searchLocation: lead.search_location,
+                                            searchDate: lead.search_date,
+                                            leadId: leadData.lead?.id || null,
+                                          }),
+                                        });
+                                        createdCount++;
+                                      }
+                                    } catch (err) {}
+                                  }
+                                  await fetchLeads();
+                                  await fetchPromotedLeads();
+                                  await fetchOpenLeads();
+                                  setSelectedPlaces(new Set());
+                                  setIsCreatingLeadsFromPlaces(false);
+                                  alert(`Successfully created ${createdCount} leads!`);
+                                }}
+                                disabled={selectedPlaces.size === 0 || isCreatingLeadsFromPlaces}
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 disabled:bg-green-400 disabled:cursor-not-allowed"
+                              >
+                                {isCreatingLeadsFromPlaces ? (
+                                  <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    Creating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="w-4 h-4" />
+                                    Create {selectedPlaces.size} Lead{selectedPlaces.size !== 1 ? 's' : ''}
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (selectedPlaces.size === 0) return;
+                                  if (!confirm(`Are you sure you want to dismiss ${selectedPlaces.size} lead${selectedPlaces.size !== 1 ? 's' : ''}?`)) return;
+                                  
+                                  let dismissedCount = 0;
+                                  for (const lead of openLeadsList.filter(l => selectedPlaces.has(l.place_id))) {
+                                    try {
+                                      await fetch('/api/dismissed', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          userId: userEmail,
+                                          campaignId: currentCampaign?.id || null,
+                                          placeId: lead.place_id,
+                                          placeName: lead.place_name,
+                                          website: lead.website,
+                                          address: lead.address,
+                                          phone: lead.phone,
+                                          reason: '', // No reason for bulk dismiss
+                                        }),
+                                      });
+                                      dismissedCount++;
+                                    } catch (err) {}
+                                  }
+                                  await fetchDismissedLeads();
+                                  await fetchOpenLeads();
+                                  setSelectedPlaces(new Set());
+                                  alert(`Successfully dismissed ${dismissedCount} lead${dismissedCount !== 1 ? 's' : ''}!`);
+                                }}
+                                disabled={selectedPlaces.size === 0}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 disabled:bg-red-400 disabled:cursor-not-allowed"
+                              >
+                                <X className="w-4 h-4" />
+                                Dismiss {selectedPlaces.size} Lead{selectedPlaces.size !== 1 ? 's' : ''}
+                              </button>
+                            </div>
+                          </div>
+                          {openLeadsList
+                            .filter(lead => {
+                              // Apply filters
+                              if (openFilterQuery && !lead.search_query?.toLowerCase().includes(openFilterQuery.toLowerCase())) {
+                                return false;
+                              }
+                              if (openFilterDateFrom && lead.search_date) {
+                                const leadDate = new Date(lead.search_date).setHours(0,0,0,0);
+                                const filterDate = new Date(openFilterDateFrom).setHours(0,0,0,0);
+                                if (leadDate < filterDate) return false;
+                              }
+                              if (openFilterDateTo && lead.search_date) {
+                                const leadDate = new Date(lead.search_date).setHours(0,0,0,0);
+                                const filterDate = new Date(openFilterDateTo).setHours(0,0,0,0);
+                                if (leadDate > filterDate) return false;
+                              }
+                              return true;
+                            })
+                            .map((lead) => (
+                            <div
+                              key={lead.id}
+                              className={`border rounded-lg p-4 transition-all ${
+                                selectedPlaces.has(lead.place_id)
+                                  ? 'border-indigo-500 bg-indigo-50'
+                                  : 'bg-white border-slate-200 hover:border-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4 mb-3">
+                                <div className="flex items-start gap-3 flex-1">
+                                  <div 
+                                    className="flex-shrink-0 mt-1 cursor-pointer"
+                                    onClick={() => {
+                                      const newSelection = new Set(selectedPlaces);
+                                      if (newSelection.has(lead.place_id)) {
+                                        newSelection.delete(lead.place_id);
+                                      } else {
+                                        newSelection.add(lead.place_id);
+                                      }
+                                      setSelectedPlaces(newSelection);
+                                    }}
+                                  >
+                                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                      selectedPlaces.has(lead.place_id)
+                                        ? 'border-indigo-600 bg-indigo-600'
+                                        : 'border-slate-300 bg-white'
+                                    }`}>
+                                      {selectedPlaces.has(lead.place_id) && (
+                                        <Check className="w-3 h-3 text-white" />
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="font-semibold text-slate-900">{lead.place_name}</h4>
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                      Open
+                                    </span>
+                                  </div>
+                                    {lead.address && (
+                                      <p className="text-sm text-slate-600 mt-1">{lead.address}</p>
+                                    )}
+                                    {lead.phone && (
+                                      <p className="text-sm text-slate-500 mt-1">📞 {lead.phone}</p>
+                                    )}
+                                    {lead.rating > 0 && (
+                                      <p className="text-sm text-amber-600 mt-1">
+                                        ⭐ {lead.rating.toFixed(1)} ({lead.user_rating_count} reviews)
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-slate-400 mt-2">
+                                      Last shown: {new Date(lead.last_shown_at).toLocaleDateString('en-GB')}
+                                    </p>
+                                  </div>
+                                </div>
+                                {/* Query/Date on top right */}
+                                {lead.search_query && (
+                                  <div className="text-right text-xs text-slate-500 flex-shrink-0">
+                                    <div>query: {lead.search_query}</div>
+                                    {lead.search_location && <div>{lead.search_location}</div>}
+                                    {lead.search_date && (
+                                      <div>date: {new Date(lead.search_date).toLocaleDateString('en-GB')}</div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {lead.website && (
+                                    <a
+                                      href={lead.website}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+                                    >
+                                      <Globe className="w-4 h-4" />
+                                      Visit Website
+                                    </a>
+                                  )}
+                                  {lead.google_maps_uri && (
+                                    <a
+                                      href={lead.google_maps_uri}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm text-slate-600 hover:text-slate-700 font-medium flex items-center gap-1"
+                                    >
+                                      <Globe className="w-4 h-4" />
+                                      Google Maps
+                                    </a>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    const placeData = {
+                                      id: lead.place_id,
+                                      name: lead.place_name,
+                                      website: lead.website,
+                                      address: lead.address,
+                                      phone: lead.phone,
+                                    };
+                                    openDismissDialog(placeData);
+                                  }}
+                                  className="text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
+                                >
+                                  <X className="w-4 h-4" />
+                                  Dismiss
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Dismissed Leads View */}
+              {googlePlacesView === 'dismissed' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+                    <div className="px-6 py-4 border-b border-slate-200">
+                      <h1 className="text-2xl font-bold text-slate-900">Dismissed Leads</h1>
+                      <p className="text-slate-600 mt-1">Review all dismissed Google Places results</p>
+                    </div>
+
+                    <div className="p-6">
+                      {dismissedLeadsList.length === 0 ? (
+                        <div className="text-center py-12">
+                          <X className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold text-slate-700 mb-2">No Dismissed Leads</h3>
+                          <p className="text-slate-500">You haven't dismissed any leads yet.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="text-sm text-slate-600 mb-4">
+                            Total dismissed: {dismissedLeadsList.length}
+                          </div>
+                          {dismissedLeadsList.map((dismissed) => (
+                            <div
+                              key={dismissed.id}
+                              className="border rounded-lg p-4 bg-red-50 border-red-200"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 mt-1">
+                                  <div className="w-5 h-5 rounded border-2 border-red-400 bg-red-400 flex items-center justify-center">
+                                    <X className="w-3 h-3 text-white" />
+                                  </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <h4 className="font-semibold text-slate-900">{dismissed.place_name}</h4>
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                          <X className="w-3 h-3" />
+                                          Dismissed
+                                        </span>
+                                      </div>
+                                      {dismissed.address && (
+                                        <p className="text-sm text-slate-600 mt-1">{dismissed.address}</p>
+                                      )}
+                                      {dismissed.phone && (
+                                        <p className="text-sm text-slate-500 mt-1">📞 {dismissed.phone}</p>
+                                      )}
+                                      {dismissed.reason && (
+                                        <div className="mt-2 p-2 bg-white rounded border border-red-200">
+                                          <p className="text-xs font-semibold text-slate-700 mb-1">Reason:</p>
+                                          <p className="text-sm text-slate-600">{dismissed.reason}</p>
+                                        </div>
+                                      )}
+                                      <p className="text-xs text-slate-400 mt-2">
+                                        Dismissed {new Date(dismissed.dismissed_at).toLocaleDateString()} at {new Date(dismissed.dismissed_at).toLocaleTimeString()}
+                                      </p>
+                                    </div>
+                                    {/* Query/Date on top right */}
+                                    {dismissed.search_query && (
+                                      <div className="text-right text-xs text-slate-500 flex-shrink-0">
+                                        <div>query: {dismissed.search_query}</div>
+                                        {dismissed.search_location && <div>{dismissed.search_location}</div>}
+                                        {dismissed.search_date && (
+                                          <div>date: {new Date(dismissed.search_date).toLocaleDateString('en-GB')}</div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                                    {dismissed.website && (
+                                      <a
+                                        href={dismissed.website}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+                                      >
+                                        <Globe className="w-4 h-4" />
+                                        Visit Website
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Promoted Leads View */}
+              {googlePlacesView === 'promoted' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+                    <div className="px-6 py-4 border-b border-slate-200">
+                      <h1 className="text-2xl font-bold text-slate-900">Promoted Leads</h1>
+                      <p className="text-slate-600 mt-1">All businesses that were converted to leads</p>
+                    </div>
+
+                    <div className="p-6">
+                      {promotedLeadsList.length === 0 ? (
+                        <div className="text-center py-12">
+                          <CheckCircle className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold text-slate-700 mb-2">No Promoted Leads</h3>
+                          <p className="text-slate-500">You haven't promoted any Google Places results yet.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="text-sm text-slate-600 mb-4">
+                            Total promoted: {promotedLeadsList.length}
+                          </div>
+                          {promotedLeadsList.map((promoted) => (
+                            <div
+                              key={promoted.id}
+                              className="border rounded-lg p-4 bg-green-50 border-green-200"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 mt-1">
+                                  <div className="w-5 h-5 rounded border-2 border-green-600 bg-green-600 flex items-center justify-center">
+                                    <CheckCircle className="w-3 h-3 text-white" />
+                                  </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <h4 className="font-semibold text-slate-900">{promoted.place_name}</h4>
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                          <CheckCircle className="w-3 h-3" />
+                                          Promoted to Lead
+                                        </span>
+                                      </div>
+                                      {promoted.address && (
+                                        <p className="text-sm text-slate-600 mt-1">{promoted.address}</p>
+                                      )}
+                                      {promoted.phone && (
+                                        <p className="text-sm text-slate-500 mt-1">📞 {promoted.phone}</p>
+                                      )}
+                                      {promoted.rating > 0 && (
+                                        <p className="text-sm text-amber-600 mt-1">
+                                          ⭐ {promoted.rating.toFixed(1)} ({promoted.user_rating_count} reviews)
+                                        </p>
+                                      )}
+                                      <p className="text-xs text-slate-400 mt-2">
+                                        Promoted {new Date(promoted.promoted_at).toLocaleDateString()} at {new Date(promoted.promoted_at).toLocaleTimeString()}
+                                      </p>
+                                    </div>
+                                    {/* Query/Date on top right */}
+                                    {promoted.search_query && (
+                                      <div className="text-right text-xs text-slate-500 flex-shrink-0">
+                                        <div>query: {promoted.search_query}</div>
+                                        {promoted.search_location && <div>{promoted.search_location}</div>}
+                                        {promoted.search_date && (
+                                          <div>date: {new Date(promoted.search_date).toLocaleDateString('en-GB')}</div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                                    {promoted.website && (
+                                      <a
+                                        href={promoted.website}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+                                      >
+                                        <Globe className="w-4 h-4" />
+                                        Visit Website
+                                      </a>
+                                    )}
+                                    {promoted.google_maps_uri && (
+                                      <a
+                                        href={promoted.google_maps_uri}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-slate-600 hover:text-slate-700 font-medium flex items-center gap-1"
+                                      >
+                                        <Globe className="w-4 h-4" />
+                                        Google Maps
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Dismiss Dialog Modal */}
+      {showDismissDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h2 className="text-xl font-bold text-slate-900">Dismiss Lead</h2>
+            </div>
+            <div className="px-6 py-4">
+              <p className="text-slate-600 mb-4">
+                You're dismissing: <strong>{placeToDissmiss?.name}</strong>
+              </p>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700">
+                  Reason for dismissing (optional)
+                </label>
+                <textarea
+                  value={dismissReason}
+                  onChange={(e) => setDismissReason(e.target.value)}
+                  placeholder="e.g., Not relevant, already contacted, outside service area..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowDismissDialog(false);
+                  setPlaceToDissmiss(null);
+                  setDismissReason('');
+                }}
+                className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={dismissPlace}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Dismiss Lead
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

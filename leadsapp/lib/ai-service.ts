@@ -71,7 +71,16 @@ Find and extract:
 
 4. Their communication tone and style
 5. Their pain points and triggers
-6. Potential website/online presence problems (slow loading, outdated design, poor mobile experience, low Google rankings, etc.)
+6. EMAIL OPENING SENTENCE:
+   Write one short, natural opening line for a cold email.
+   You may only reference one broad theme from the lead's website or Instagram — not multiple.
+   The line must sound like someone glanced at their brand, not like someone studied them.
+   Do not mention schedules, events, workshops, trainings, pricing, locations, dates, captions, or any detail that feels "insider."
+   Do not summarize their offerings.
+   Do not restate slogans or taglines.
+   Do not tell them what they do; simply acknowledge the general vibe or intention behind their work (rest, nervous system support, sound healing, breathwork, community, etc.).
+   Keep the line under 18 words.
+   Tone: warm, calm, human, lightly personalized — nothing dramatic or "marketing-y."
 
 Provide a JSON response:
 {
@@ -82,7 +91,7 @@ Provide a JSON response:
   "toneKeywords": ["keyword1", "keyword2", "keyword3"],
   "storyArc": "Their overall journey narrative in 2-3 sentences",
   "keyTriggers": ["pain point 1", "pain point 2", "pain point 3"],
-  "websiteProblem": "Specific problem with their current online presence (with made-up but believable data like '56% traffic loss' or '8.3 second load time')",
+  "emailOpening": "1-2 warm, natural sentences that feel like a real person briefly explored their work",
   "engagementInsights": "Pattern you noticed: e.g., 'manifestation content gets 2x more engagement than other topics'",
   "insights": "Additional insights about their work and achievements"
 }`;
@@ -182,7 +191,16 @@ Find and extract:
 
 4. Their communication tone and style
 5. Their pain points and triggers
-6. Potential website/online presence problems (slow loading, outdated design, poor mobile experience, low Google rankings, etc.)
+6. EMAIL OPENING SENTENCE:
+   Write one short, natural opening line for a cold email.
+   You may only reference one broad theme from the lead's website or Instagram — not multiple.
+   The line must sound like someone glanced at their brand, not like someone studied them.
+   Do not mention schedules, events, workshops, trainings, pricing, locations, dates, captions, or any detail that feels "insider."
+   Do not summarize their offerings.
+   Do not restate slogans or taglines.
+   Do not tell them what they do; simply acknowledge the general vibe or intention behind their work (rest, nervous system support, sound healing, breathwork, community, etc.).
+   Keep the line under 18 words.
+   Tone: warm, calm, human, lightly personalized — nothing dramatic or "marketing-y."
 
 Provide a JSON response:
 {
@@ -193,7 +211,7 @@ Provide a JSON response:
   "toneKeywords": ["keyword1", "keyword2", "keyword3"],
   "storyArc": "Their overall journey narrative in 2-3 sentences",
   "keyTriggers": ["pain point 1", "pain point 2", "pain point 3"],
-  "websiteProblem": "Specific problem with their current online presence (with made-up but believable data like '56% traffic loss' or '8.3 second load time')",
+  "emailOpening": "1-2 warm, natural, personalized sentences that pull them into the message",
   "engagementInsights": "Pattern you noticed: e.g., 'manifestation content gets 2x more engagement than other topics'",
   "insights": "Additional insights about their work and achievements"
 }`;
@@ -269,91 +287,38 @@ export async function generateEmailWithOpenAI(
   let userPrompt = '';
   
   if (emailType === 'initial') {
-    const mutualConnection = leadData?.mutualConnection || analysis.topCommenter;
-    const specificAchievement = analysis.specificAchievement || 
-      (analysis._instagramAnalytics?.mostEngagingPost ? 
-        `Your post about ${analysis._instagramAnalytics.mostEngagingTopic} got ~${analysis._instagramAnalytics.mostEngagingPost.likesCount}~ likes` : 
-        'your incredible work');
+    const emailOpening = analysis.emailOpening || 
+      `I came across your work and it really resonated with me.`;
     
-    userPrompt = `Write a high-converting cold email to ${prospectName} following this PROVEN framework that gets 20-50% response rates:
+    userPrompt = `Generate a cold email using EXACTLY this template.
 
-CONTEXT FROM ANALYSIS:
-- Specific Hook Story: ${leadData?.specificHookStory || analysis.specificHookStory || 'their journey and transformation story from the analysis'}
-- Mutual Connection/Top Commenter: ${mutualConnection ? `@${mutualConnection}` : 'None - use specific achievement'}
-- Specific Achievement: ${specificAchievement}
-- Tone Keywords: ${analysis.toneKeywords?.join(', ') || 'authentic, vulnerable, educational'}
-- Story Arc: ${analysis.storyArc || 'their transformation journey'}
-- Pain Points: ${analysis.keyTriggers?.join(', ') || 'struggles with consistency'}
-- Website Problem: ${leadData?.problemStatement || analysis.websiteProblem || 'site doesn\'t match quality of their work, slow mobile load times'}
-${analysis.engagementInsights ? `- Engagement Insight: ${analysis.engagementInsights}` : ''}
+EMAIL OPENING (already personalized): ${emailOpening}
 
-CRITICAL FORMATTING RULES:
-- First sentence after greeting: MAXIMUM 15 words
-- Break into SHORT paragraphs (2-3 sentences max)
-- Use line breaks for readability
-- Total email: 150-200 words MAX
+SUBJECT LINE TASK:
+Write one short, low-hype subject line based on the opening context.
+Max 6-7 words total.
+Avoid spammy words (free, discount, urgent, guarantee, etc.).
+Examples: "Quick question about your breathwork", "Small idea for your practice"
 
-EMAIL STRUCTURE:
+EMAIL BODY:
+Hi ${firstName},
 
-1. SUBJECT LINE: 
-   ${mutualConnection ? 
-     `"I found you through @${mutualConnection}"` : 
-     `"${specificAchievement}"`}
-   
-   Must reference something specific and real from their work.
+${emailOpening}
 
-2. HOOK (Keep sentences SHORT - max 15 words each):
-   "${firstName}, I've been a big fan of yours."
-   
-   Then 2-3 SHORT sentences about their specific story/achievement with REAL DATA.
-   Example: "Your post about manifestation got ~176~ views in 3 days."
-   Break up long sentences. Keep it punchy.
+Quick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?
 
-3. TRANSITION:
-   "You're a busy person so I'll just cut to the chase:"
+I help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.
 
-4. PROBLEM STATEMENT (One sentence with specific data):
-   "Right now, [specific website problem with numbers like ~7.8 seconds load time or ~48% bounce rate]."
+If you want, I can take a quick look and tell you exactly where the bottleneck is.
 
-5. SOLUTION (Numbered list 1-4, BRIEF):
-   "So we took your site and added:
-   
-   1. A minimal layout that Google loves
-   We did this for an agency in Queensland—leads went up 30%, closed a $4.2M project in 2 weeks.
-   
-   2. Lead Qualification System
-   80% of ${analysis.industry || 'creators'} I talk to don't want more leads, they want better leads.
-   
-   3. Built-in SEO to rank higher on Google
-   
-   4. After launch, we test and optimize based on data to maximize ROI."
+Would that be useful?
 
-6. CTA:
-   "To see the full website, check the PDF attached.
-   
-   So what do you think? We can have it live within 72 hours.
-   
-   Koen"
-
-7. P.S.:
-   "P.S. 67% of searches start on a phone. Your site is responsive on every device."
-
-CRITICAL RULES:
-- NO sentence over 15 words in the hook section
-- Break up any long sentences with periods
-- Use line breaks between ideas
-- Be conversational, direct
-- Reference real details from their story
-- Use ~numbers~ with tildes for ALL metrics (looks researched)
-- DO NOT use special characters like ✦, –, or other unicode symbols
-- Use simple ASCII characters only: standard dashes -, percentages %, dollar signs $
-- Keep formatting clean and email-friendly
-${mutualConnection ? `- MUST mention "I found you through @${mutualConnection}" in subject or opening` : ''}
+Cheers,
 
 Return JSON:
 {
-  "subject": "Subject line based on framework above",
-  "body": "Full email body following the exact structure with clean ASCII text only, name signed as Koen"
+  "subject": "Your subject line here (6-7 words max)",
+  "body": "Hi ${firstName},\\n\\n${emailOpening}\\n\\nQuick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\\n\\nI help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\\n\\nIf you want, I can take a quick look and tell you exactly where the bottleneck is.\\n\\nWould that be useful?\\n\\nCheers,"
 }`;
   } else if (emailType === 'follow_up_1') {
     userPrompt = `Write the "Made your site live" follow-up email to ${prospectName}.

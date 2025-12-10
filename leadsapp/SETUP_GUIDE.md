@@ -29,6 +29,11 @@ Your app is now **fully functional**! Follow these steps to complete the setup a
 - Click **Create API Key**
 - Gemini has a generous free tier!
 
+#### Google Places API Key (Optional - for Lead Scraper)
+- See detailed setup guide: `GOOGLE_PLACES_SETUP.md`
+- Enables searching for businesses and creating leads in bulk
+- Pay-as-you-go pricing with $200 free credit for new accounts
+
 ### 3. Configure Environment Variables
 
 Open `.env.local` and update with your real credentials:
@@ -43,6 +48,9 @@ OPENAI_API_KEY=sk-proj-...
 
 # Gemini
 GEMINI_API_KEY=AIza...
+
+# Google Places (Optional - for lead scraper)
+GOOGLE_PLACES_API_KEY=your_google_places_api_key_here
 ```
 
 ---

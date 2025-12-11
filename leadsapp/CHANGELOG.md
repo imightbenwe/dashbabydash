@@ -2,6 +2,46 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.2.0] - 2025-12-11
+
+### Added
+- **🤖 Automation System**: Background automation for lead processing
+  - **Stage 0 → 1**: Automatically scrapes website 2 minutes after lead creation
+  - **Stage 1 → 2**: Automatically runs AI analysis 1 minute after scraping
+  - Runs while localhost server is active (every 60 seconds)
+  - Processes up to 10 leads per stage per check
+  - Full error handling with retry mechanism
+
+- **Visual Indicators**: 
+  - CRM table now shows automation stage column with status badges
+  - Lead detail page displays automation progress and errors
+  - Emoji indicators: ⏳ Queued, 🔍 Scraped, ✅ Analyzed, ❌ Error
+
+- **Error Recovery**:
+  - Failed automations marked as Stage -1 with error message
+  - "Retry" button in lead detail page for failed automations
+  - Errors don't block other leads from processing
+  - Hover over warning icon in CRM for error details
+
+- **API Endpoints**:
+  - `POST /api/automation/process` - Main automation worker
+  - `POST /api/automation/retry/{id}` - Retry failed automation
+
+- **Documentation**: 
+  - Comprehensive automation system docs (`AUTOMATION_SYSTEM_DOCS.md`)
+  - Database migration file (`AUTOMATION_STAGE_MIGRATION.sql`)
+
+### Changed
+- **Lead Type**: Added `automation_stage`, `automation_stage_updated_at`, `automation_error` fields
+- **CRM Table**: Added automation stage column with visual status indicators
+- **Main Page**: Integrated `useAutomation` hook for background polling
+
+### Technical Details
+- Frontend polling via `useAutomation` custom hook
+- Server-side processing prevents browser overload
+- Independent lead processing (one failure doesn't affect others)
+- Ready for future expansion (email sending, follow-ups, etc.)
+
 ## [2.1.0] - 2025-12-11
 
 ### Added

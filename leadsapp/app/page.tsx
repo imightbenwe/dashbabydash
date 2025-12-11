@@ -12,11 +12,15 @@ import { CRMTable } from '@/components/tables/CRMTable';
 import { GooglePlacesSearch } from '@/components/places/GooglePlacesSearch';
 import { DemoGenerator } from '@/components/demo/DemoGenerator';
 import { WebsiteScraper } from '@/components/scraper/WebsiteScraper';
+import { useAutomation } from '@/lib/hooks/useAutomation';
 
 type Tab = 'crm' | 'new-analysis' | 'google-places' | 'demo-generator' | 'website-scraper';
 
 export default function Home() {
   const [currentTab, setCurrentTab] = useState<Tab>('crm');
+  
+  // Enable automation polling - runs every minute
+  useAutomation(true);
 
   return (
     <div className="min-h-screen bg-slate-50">

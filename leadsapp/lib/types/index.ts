@@ -72,6 +72,11 @@ export interface Lead {
   pdf_url: string | null;
   mockup_site_url: string | null;
   
+  // Automation tracking
+  automation_stage: number; // 0=collected, 1=scraped, 2=analyzed, -1=error
+  automation_stage_updated_at: string | null;
+  automation_error: string | null;
+  
   created_at: string;
   updated_at: string;
 }

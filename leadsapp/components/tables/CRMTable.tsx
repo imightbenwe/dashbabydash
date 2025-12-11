@@ -139,6 +139,21 @@ export function CRMTable() {
     return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const getAutomationStageInfo = (stage: number) => {
+    switch (stage) {
+      case -1:
+        return { label: 'Error', color: 'bg-red-100 text-red-800', icon: '❌' };
+      case 0:
+        return { label: 'Queued', color: 'bg-slate-100 text-slate-600', icon: '⏳' };
+      case 1:
+        return { label: 'Scraped', color: 'bg-yellow-100 text-yellow-800', icon: '🔍' };
+      case 2:
+        return { label: 'Analyzed', color: 'bg-green-100 text-green-800', icon: '✅' };
+      default:
+        return { label: 'Unknown', color: 'bg-slate-100 text-slate-600', icon: '?' };
+    }
+  };
+
   if (isLoading && leads.length === 0) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -249,6 +264,7 @@ export function CRMTable() {
                 </th>
                 <th className="px-6 py-4">Prospect</th>
                 <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Automation</th>
                 <th className="px-6 py-4">Persona Score</th>
                 <th className="px-6 py-4">Created</th>
                 <th className="px-6 py-4">Contacted</th>
@@ -258,7 +274,7 @@ export function CRMTable() {
             <tbody className="divide-y divide-slate-100">
               {paginatedLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
                     {leads.length === 0 
                       ? 'No leads yet. Run an analysis to get started!' 
                       : 'No leads match the selected filters.'}
@@ -302,6 +318,27 @@ export function CRMTable() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(lead.status)}`}>
                         {formatStatusLabel(lead.status)}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const stageInfo = getAutomationStageInfo(lead.automation_stage ?? 0);
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${stageInfo.color}`}>
+                              <span className="mr-1">{stageInfo.icon}</span>
+                              {stageInfo.label}
+                            </span>
+                            {lead.automation_error && (
+                              <span 
+                                className="text-red-500 cursor-help text-xs"
+                                title={lead.automation_error}
+                              >
+                                ⚠️
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">

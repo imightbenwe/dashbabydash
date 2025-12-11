@@ -881,7 +881,64 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
 
             {/* Lead Details */}
             <div className="flex-1">
-              <h2 className="text-lg font-bold text-slate-900 mb-4">Lead Information</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-slate-900">Lead Information</h2>
+                
+                {/* Automation Status Badge */}
+                {lead.automation_stage !== undefined && (
+                  <div className="flex items-center gap-2">
+                    {lead.automation_stage === -1 ? (
+                      <>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <span className="mr-1">❌</span> Automation Error
+                        </span>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(`/api/automation/retry/${leadId}`, {
+                                method: 'POST',
+                              });
+                              if (response.ok) {
+                                alert('Automation will retry on next check (within 1 minute)');
+                                fetchLeadData(leadId);
+                              } else {
+                                const data = await response.json();
+                                alert(data.error || 'Failed to retry');
+                              }
+                            } catch (err) {
+                              alert('Failed to retry automation');
+                            }
+                          }}
+                          className="px-3 py-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                        >
+                          Retry
+                        </button>
+                      </>
+                    ) : lead.automation_stage === 0 ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                        <span className="mr-1">⏳</span> Queued for Automation
+                      </span>
+                    ) : lead.automation_stage === 1 ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <span className="mr-1">🔍</span> Website Scraped
+                      </span>
+                    ) : lead.automation_stage === 2 ? (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <span className="mr-1">✅</span> AI Analysis Complete
+                      </span>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              
+              {/* Show error message if present */}
+              {lead.automation_error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-xs font-semibold text-red-800 mb-1">Automation Error:</p>
+                  <p className="text-xs text-red-700">{lead.automation_error}</p>
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Name</label>

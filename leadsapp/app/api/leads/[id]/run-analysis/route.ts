@@ -21,16 +21,18 @@ export async function POST(
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
-    // 2. Get raw data sources
+    // 2. Get raw data sources (EXCLUDE privacy_policy - only for email extraction)
     const { data: rawSources } = await supabaseAdmin
       .from('raw_data_sources')
       .select('*')
-      .eq('lead_id', id);
+      .eq('lead_id', id)
+      .neq('source_type', 'privacy_policy'); // Don't include privacy policy in AI analysis
 
     // 3. Combine all content
     const combinedData: any = {
       prospectName: lead.name,
       company: lead.company,
+      email: lead.email, // ADD EMAIL SO AI CAN EXTRACT NAME FROM IT
     };
 
     rawSources?.forEach(source => {
@@ -91,13 +93,69 @@ export async function POST(
       .select()
       .single();
 
-    // 8. Done - user can now generate email with updated data
-    console.log('✅ Analysis complete - user can now generate email with updated data');
+    // 8. Update lead name with extracted first name if available
+    console.log(`🔍 AI returned firstNameGuess: "${openaiAnalysis?.firstNameGuess}"`);
+    
+    if (openaiAnalysis?.firstNameGuess && 
+        openaiAnalysis.firstNameGuess.trim() !== '') {
+      console.log(`📝 Updating lead name to: ${openaiAnalysis.firstNameGuess}`);
+      await supabaseAdmin
+        .from('leads')
+        .update({ name: openaiAnalysis.firstNameGuess })
+        .eq('id', id);
+    } else {
+      console.log('⚠️ No first name returned by AI');
+    }
+
+    // 9. Auto-generate initial email immediately
+    console.log('📧 Auto-generating initial email...');
+    try {
+      const emailData = await generateEmailWithOpenAI(
+        openaiAnalysis?.firstNameGuess || lead.name,
+        openaiAnalysis,
+        'initial',
+        undefined,
+        {
+          mutualConnection: lead.mutual_connection_name,
+          specificHookStory: lead.specific_hook_story || openaiAnalysis?.specificHookStory,
+          problemStatement: lead.problem_statement || openaiAnalysis?.websiteProblem,
+          caseStudy: lead.case_study_reference,
+          mockupSiteUrl: lead.mockup_site_url,
+        }
+      );
+
+      // Delete existing initial email if any
+      await supabaseAdmin
+        .from('generated_emails')
+        .delete()
+        .eq('lead_id', id)
+        .eq('email_type', 'initial');
+
+      // Save new email
+      await supabaseAdmin
+        .from('generated_emails')
+        .insert({
+          lead_id: id,
+          email_type: 'initial',
+          subject: emailData.subject,
+          body: emailData.body,
+          llm_provider: 'openai',
+        });
+
+      console.log('✅ Initial email auto-generated successfully');
+    } catch (emailError) {
+      console.error('⚠️ Failed to auto-generate email:', emailError);
+      // Don't fail the whole analysis if email generation fails
+    }
+
+    // 10. Done - analysis and email complete
+    console.log('✅ Analysis and email generation complete');
 
     return NextResponse.json({
       success: true,
-      message: 'Analysis completed successfully',
+      message: 'Analysis and email generated successfully',
       analyses: 1,
+      emailGenerated: true,
     });
 
   } catch (error) {

@@ -6,7 +6,7 @@ const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, location, maxResults = 20, pageToken } = await request.json();
+    const { query, location, maxResults = 20, pageToken, minReviews = 0, maxReviews = 10000 } = await request.json();
 
     if (!query) {
       return NextResponse.json(
@@ -85,9 +85,14 @@ export async function POST(request: NextRequest) {
       nextPageToken: data.nextPageToken
     });
     
-    // Filter results to only include places with websites
+    // Filter results to only include places with websites AND within review count range
     const placesWithWebsites = (data.places || [])
-      .filter((place: any) => place.websiteUri)
+      .filter((place: any) => {
+        const hasWebsite = !!place.websiteUri;
+        const reviewCount = place.userRatingCount || 0;
+        const withinReviewRange = reviewCount >= minReviews && reviewCount <= maxReviews;
+        return hasWebsite && withinReviewRange;
+      })
       .map((place: any) => ({
         id: place.id,
         name: place.displayName?.text || 'Unknown',

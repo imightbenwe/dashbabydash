@@ -17,7 +17,11 @@ export async function POST(
 
     // Determine source type and content format
     const isInstagram = sourceType === 'instagram';
+    const isWebsite = sourceType === 'website';
+    const isPrivacyPolicy = sourceType === 'privacy_policy';
     let rawContent;
+    let fileName;
+    let finalSourceType;
     
     if (isInstagram) {
       // Parse JSON for Instagram data
@@ -26,8 +30,20 @@ export async function POST(
       } catch (e) {
         rawContent = { text: data };
       }
+      fileName = 'instagram_data.json';
+      finalSourceType = 'instagram';
+    } else if (isWebsite) {
+      rawContent = { text: data };
+      fileName = 'website_scraped';
+      finalSourceType = 'website';
+    } else if (isPrivacyPolicy) {
+      rawContent = { text: data };
+      fileName = 'privacy_policy_scraped';
+      finalSourceType = 'privacy_policy';
     } else {
       rawContent = { text: data };
+      fileName = 'manual_input';
+      finalSourceType = 'other';
     }
 
     // Save to raw_data_sources table
@@ -35,8 +51,8 @@ export async function POST(
       .from('raw_data_sources')
       .insert({
         lead_id: id,
-        source_type: isInstagram ? 'instagram' : 'other',
-        file_name: isInstagram ? 'instagram_data.json' : 'manual_input',
+        source_type: finalSourceType,
+        file_name: fileName,
         raw_content: rawContent,
       });
 

@@ -345,12 +345,13 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
         extractedFacebook = fbFoundMatch[1].trim();
       }
 
-      // 4. Save full scraped content to Additional Data
+      // 4. Save full scraped content to Additional Data (website content)
       const additionalDataResponse = await fetch(`/api/leads/${leadId}/additional-data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           data: scrapedContent,
+          sourceType: 'website',
         }),
       });
 
@@ -359,7 +360,23 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
         console.error('Failed to save scraped content:', errorData);
         // Don't throw - continue with extraction even if save fails
       } else {
-        console.log('✅ Scraped content saved to additional data');
+        console.log('✅ Scraped website content saved');
+      }
+
+      // 4b. Save privacy policy content separately (if exists) - NOT for AI analysis, just for email extraction
+      if (scrapeData.privacyPolicyContent) {
+        const privacyDataResponse = await fetch(`/api/leads/${leadId}/additional-data`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: scrapeData.privacyPolicyContent,
+            sourceType: 'privacy_policy',
+          }),
+        });
+
+        if (privacyDataResponse.ok) {
+          console.log('✅ Privacy policy content saved separately');
+        }
       }
 
       // 5. Update lead with extracted email and Instagram
@@ -473,9 +490,15 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       const data = await response.json();
       console.log('✅ Analysis complete:', data);
       
-      // Refresh the page data
-      fetchLeadData(leadId);
-      alert('Analysis completed successfully!');
+      // Refresh lead data (includes updated name) and analysis
+      await Promise.all([
+        fetchLeadData(leadId),
+        fetchLeadAnalysis(leadId)
+      ]);
+      
+      alert(data.emailGenerated 
+        ? '✅ Analysis complete and email generated!' 
+        : '✅ Analysis completed successfully!');
     } catch (error) {
       console.error('Error running analysis:', error);
       alert('Failed to run analysis. Please try again.');
@@ -1470,9 +1493,13 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
                         source.source_type === 'website' ? 'bg-blue-100 text-blue-700' :
                         source.source_type === 'substack' ? 'bg-orange-100 text-orange-700' :
                         source.source_type === 'threads' ? 'bg-purple-100 text-purple-700' :
+                        source.source_type === 'privacy_policy' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-gray-100 text-gray-700'
                       }`}>
-                        {source.source_type === 'other' ? 'Additional Data' : source.source_type}
+                        {source.source_type === 'instagram' ? 'Instagram Data' :
+                         source.source_type === 'website' ? 'Website' :
+                         source.source_type === 'privacy_policy' ? 'Privacy Policy' :
+                         source.source_type === 'other' ? 'Additional Data' : source.source_type}
                       </span>
                       <span className="text-xs text-slate-500">
                         {new Date(source.uploaded_at).toLocaleDateString()} at {new Date(source.uploaded_at).toLocaleTimeString()}

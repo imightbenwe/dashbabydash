@@ -61,7 +61,7 @@ CREATE TABLE leads (
 CREATE TABLE raw_data_sources (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   lead_id UUID REFERENCES leads(id) ON DELETE CASCADE,
-  source_type TEXT NOT NULL CHECK (source_type IN ('instagram', 'website', 'substack', 'threads', 'other')),
+  source_type TEXT NOT NULL CHECK (source_type IN ('instagram', 'website', 'substack', 'threads', 'privacy_policy', 'other')),
   file_name TEXT,
   raw_content JSONB NOT NULL, -- Stores JSON or text as JSONB
   uploaded_at TIMESTAMPTZ DEFAULT NOW()

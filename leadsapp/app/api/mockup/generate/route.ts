@@ -27,11 +27,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
-    // 2. Fetch Instagram data and AI analyses
+    // 2. Fetch Instagram data and AI analyses (EXCLUDE privacy_policy)
     const { data: rawData } = await supabaseAdmin
       .from('raw_data_sources')
       .select('*')
-      .eq('lead_id', leadId);
+      .eq('lead_id', leadId)
+      .neq('source_type', 'privacy_policy'); // Don't include privacy policy
 
     const { data: analyses } = await supabaseAdmin
       .from('ai_analyses')

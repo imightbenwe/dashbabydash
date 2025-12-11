@@ -175,6 +175,11 @@ export async function POST(request: NextRequest) {
       }
     };
 
+    // Helper function to normalize domain (remove www.)
+    const normalizeDomain = (domain: string): string => {
+      return domain.replace(/^www\./, '');
+    };
+
     // Helper function to extract links from header and footer
     const extractNavLinks = (html: string): string[] => {
       const $ = cheerio.load(html);
@@ -189,17 +194,38 @@ export async function POST(request: NextRequest) {
             const absoluteUrl = new URL(href, url).href;
             const linkUrl = new URL(absoluteUrl);
 
-            // Only add if same domain and not already visited
-            if (linkUrl.hostname === baseDomain && !visitedUrls.has(absoluteUrl)) {
+            // Only add if same domain and not already visited (normalize to ignore www.)
+            if (normalizeDomain(linkUrl.hostname) === normalizeDomain(baseDomain) && !visitedUrls.has(absoluteUrl)) {
               // Filter out common non-content links
               const path = linkUrl.pathname.toLowerCase();
+              const pathSegments = path.split('/').filter(Boolean);
+              
+              // Filter out Wix image transformation params and other junk
+              const isImageParam = pathSegments.length === 1 && (
+                pathSegments[0].startsWith('w_') ||
+                pathSegments[0].startsWith('h_') ||
+                pathSegments[0].startsWith('al_') ||
+                pathSegments[0].startsWith('q_') ||
+                pathSegments[0].startsWith('usm_') ||
+                pathSegments[0].startsWith('enc_') ||
+                pathSegments[0].includes('quality_') ||
+                pathSegments[0].length < 3 // Skip very short paths
+              );
+              
               if (!path.includes('#') && 
                   !path.endsWith('.pdf') && 
                   !path.endsWith('.jpg') && 
                   !path.endsWith('.png') &&
+                  !path.endsWith('.jpeg') &&
+                  !path.endsWith('.gif') &&
+                  !path.endsWith('.svg') &&
+                  !path.endsWith('.css') &&
+                  !path.endsWith('.js') &&
                   !path.includes('login') &&
                   !path.includes('signup') &&
-                  !path.includes('cart')) {
+                  !path.includes('cart') &&
+                  !isImageParam &&
+                  pathSegments.length > 0) { // Must have at least one path segment
                 links.push(absoluteUrl);
               }
             }
@@ -246,7 +272,7 @@ export async function POST(request: NextRequest) {
         try {
           const absoluteUrl = new URL(href, url).href;
           const linkUrl = new URL(absoluteUrl);
-          if (linkUrl.hostname === baseDomain && !visitedUrls.has(absoluteUrl)) {
+          if (normalizeDomain(linkUrl.hostname) === normalizeDomain(baseDomain) && !visitedUrls.has(absoluteUrl)) {
             privacyPolicyLinks.push(absoluteUrl);
           }
         } catch (err) {
@@ -307,9 +333,11 @@ export async function POST(request: NextRequest) {
       if (pageData) scrapedPages.push(pageData);
     });
 
-    // Step 3.5: Scrape privacy policy pages for contact info (but don't include content)
+    // Step 3.5: Scrape privacy policy pages separately (for email extraction only)
     const privacyEmails: string[] = [];
     const privacyPhones: string[] = [];
+    let privacyPolicyContent = '';
+    
     for (const privacyUrl of privacyPolicyLinks.slice(0, 3)) { // Max 3 privacy pages
       try {
         console.log(`🔒 Checking privacy page for contact info: ${privacyUrl}`);
@@ -319,13 +347,28 @@ export async function POST(request: NextRequest) {
         });
         const $priv = cheerio.load(privacyResponse.data);
         
-        // Extract emails from mailto links
+        // Extract emails from mailto links AND link text
         $priv('a[href^="mailto:"]').each((_, el) => {
           const href = $priv(el).attr('href');
+          const linkText = $priv(el).text().trim();
+          
           if (href) {
             const email = href.replace('mailto:', '').split('?')[0];
             if (!privacyEmails.includes(email)) {
               privacyEmails.push(email);
+            }
+          }
+          
+          // Also check if the link text itself is an email (handles your exact case!)
+          if (linkText && linkText.includes('@')) {
+            const emailRegex = /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g;
+            const textEmails = linkText.match(emailRegex);
+            if (textEmails) {
+              textEmails.forEach(email => {
+                if (!privacyEmails.includes(email)) {
+                  privacyEmails.push(email);
+                }
+              });
             }
           }
         });
@@ -353,6 +396,14 @@ export async function POST(request: NextRequest) {
             }
           });
         }
+        
+        // Store full privacy policy content separately
+        const pageTitle = $priv('title').text() || $priv('h1').first().text() || 'Privacy/Terms Page';
+        privacyPolicyContent += `\n\n${'='.repeat(80)}\n`;
+        privacyPolicyContent += `${pageTitle}\n`;
+        privacyPolicyContent += `URL: ${privacyUrl}\n`;
+        privacyPolicyContent += `${'='.repeat(80)}\n\n`;
+        privacyPolicyContent += privacyText;
       } catch (err) {
         console.error(`Failed to scrape privacy page ${privacyUrl}:`, err);
       }
@@ -527,6 +578,7 @@ Provide concise, practical descriptions for each image.`;
     return NextResponse.json({
       success: true,
       content: combinedContent,
+      privacyPolicyContent: privacyPolicyContent || null,
       pagesScraped: scrapedPages.length,
       urls: scrapedPages.map(p => p.url),
     });

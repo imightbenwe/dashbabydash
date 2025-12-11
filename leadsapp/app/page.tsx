@@ -45,6 +45,8 @@ export default function Home() {
   const [placesQuery, setPlacesQuery] = useState('');
   const [placesLocation, setPlacesLocation] = useState('');
   const [placesMaxResults, setPlacesMaxResults] = useState(20);
+  const [minReviews, setMinReviews] = useState(0);
+  const [maxReviews, setMaxReviews] = useState(10000);
   const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
   const [placesResults, setPlacesResults] = useState<any[]>([]);
   const [selectedPlaces, setSelectedPlaces] = useState<Set<string>>(new Set());
@@ -61,6 +63,11 @@ export default function Home() {
   const [openFilterQuery, setOpenFilterQuery] = useState('');
   const [openFilterDateFrom, setOpenFilterDateFrom] = useState('');
   const [openFilterDateTo, setOpenFilterDateTo] = useState('');
+  
+  // Filters for CRM leads
+  const [crmFilterStatus, setCrmFilterStatus] = useState('');
+  const [crmFilterDateFrom, setCrmFilterDateFrom] = useState('');
+  const [crmFilterDateTo, setCrmFilterDateTo] = useState('');
   
   const [showDismissDialog, setShowDismissDialog] = useState(false);
   const [placeToDissmiss, setPlaceToDissmiss] = useState<any>(null);
@@ -473,6 +480,8 @@ export default function Home() {
           query: placesQuery,
           location: placesLocation,
           maxResults: placesMaxResults,
+          minReviews: minReviews,
+          maxReviews: maxReviews,
           pageToken: null, // Pagination disabled with duplicate filtering
         }),
       });
@@ -1287,29 +1296,127 @@ Best,
                 <div className="flex items-center gap-4">
                   <h1 className="text-2xl font-bold text-slate-900">Leads Pipeline</h1>
                   {selectedLeads.size > 0 && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-600">{selectedLeads.size} selected</span>
-                      <button
-                        onClick={deleteLeads}
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Delete
-                      </button>
-                    </div>
+                    <span className="text-sm text-slate-600">{selectedLeads.size} selected</span>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <input type="text" placeholder="Search leads..." className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"/>
-                  <button className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2">
-                    <Filter className="w-4 h-4" /> Filter
+                {selectedLeads.size > 0 && (
+                  <button
+                    onClick={deleteLeads}
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
                   </button>
+                )}
+              </div>
+
+              <div className="mb-4 bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-slate-500" />
+                    <span className="text-sm font-medium text-slate-700">Filters:</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600">Status:</label>
+                    <select
+                      value={crmFilterStatus}
+                      onChange={(e) => setCrmFilterStatus(e.target.value)}
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      <option value="">All</option>
+                      <option value="lead_collected">Lead Collected</option>
+                      <option value="email_1_sent">Email 1 Sent</option>
+                      <option value="email_2_sent">Email 2 Sent</option>
+                      <option value="email_3_sent">Email 3 Sent</option>
+                      <option value="replied_not_fit">Replied Not Fit</option>
+                      <option value="replied_interested">Replied Interested</option>
+                      <option value="call_booked">Call Booked</option>
+                      <option value="call_done_thinking">Call Done Thinking</option>
+                      <option value="won">Won</option>
+                      <option value="lost">Lost</option>
+                      <option value="site_live">Site Live</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600">From:</label>
+                    <input
+                      type="date"
+                      value={crmFilterDateFrom}
+                      onChange={(e) => setCrmFilterDateFrom(e.target.value)}
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600">To:</label>
+                    <input
+                      type="date"
+                      value={crmFilterDateTo}
+                      onChange={(e) => setCrmFilterDateTo(e.target.value)}
+                      className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  {(crmFilterStatus || crmFilterDateFrom || crmFilterDateTo) && (
+                    <button
+                      onClick={() => {
+                        setCrmFilterStatus('');
+                        setCrmFilterDateFrom('');
+                        setCrmFilterDateTo('');
+                      }}
+                      className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+                    >
+                      <X className="w-4 h-4" />
+                      Clear
+                    </button>
+                  )}
                 </div>
               </div>
 
               <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                {/* Display filtered count */}
+                {(() => {
+                  // Apply filtering logic
+                  let filteredLeads = leads;
+                  
+                  if (crmFilterStatus) {
+                    filteredLeads = filteredLeads.filter(lead => lead.status === crmFilterStatus);
+                  }
+                  
+                  if (crmFilterDateFrom) {
+                    const fromDate = new Date(crmFilterDateFrom);
+                    fromDate.setHours(0, 0, 0, 0);
+                    filteredLeads = filteredLeads.filter(lead => {
+                      if (!lead.created_at) return false;
+                      const leadDate = new Date(lead.created_at);
+                      leadDate.setHours(0, 0, 0, 0);
+                      return leadDate >= fromDate;
+                    });
+                  }
+                  
+                  if (crmFilterDateTo) {
+                    const toDate = new Date(crmFilterDateTo);
+                    toDate.setHours(23, 59, 59, 999);
+                    filteredLeads = filteredLeads.filter(lead => {
+                      if (!lead.created_at) return false;
+                      const leadDate = new Date(lead.created_at);
+                      return leadDate <= toDate;
+                    });
+                  }
+                  
+                  const hasFilters = crmFilterStatus || crmFilterDateFrom || crmFilterDateTo;
+                  
+                  return hasFilters && (
+                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 text-sm text-slate-600">
+                      Showing <span className="font-semibold text-slate-900">{filteredLeads.length}</span> of <span className="font-semibold text-slate-900">{leads.length}</span> leads
+                    </div>
+                  );
+                })()}
+                
                 <table className="w-full text-left text-sm text-slate-600">
                   <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
                     <tr>
@@ -1318,9 +1425,37 @@ Best,
                           type="checkbox" 
                           checked={selectAll}
                           onChange={(e) => {
+                            // Calculate filtered leads for selection
+                            let filteredLeads = leads;
+                            
+                            if (crmFilterStatus) {
+                              filteredLeads = filteredLeads.filter(lead => lead.status === crmFilterStatus);
+                            }
+                            
+                            if (crmFilterDateFrom) {
+                              const fromDate = new Date(crmFilterDateFrom);
+                              fromDate.setHours(0, 0, 0, 0);
+                              filteredLeads = filteredLeads.filter(lead => {
+                                if (!lead.created_at) return false;
+                                const leadDate = new Date(lead.created_at);
+                                leadDate.setHours(0, 0, 0, 0);
+                                return leadDate >= fromDate;
+                              });
+                            }
+                            
+                            if (crmFilterDateTo) {
+                              const toDate = new Date(crmFilterDateTo);
+                              toDate.setHours(23, 59, 59, 999);
+                              filteredLeads = filteredLeads.filter(lead => {
+                                if (!lead.created_at) return false;
+                                const leadDate = new Date(lead.created_at);
+                                return leadDate <= toDate;
+                              });
+                            }
+                            
                             setSelectAll(e.target.checked);
                             if (e.target.checked) {
-                              setSelectedLeads(new Set(leads.map(l => l.id)));
+                              setSelectedLeads(new Set(filteredLeads.map(l => l.id)));
                             } else {
                               setSelectedLeads(new Set());
                             }
@@ -1338,14 +1473,49 @@ Best,
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {leads.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
-                          No leads yet. Run an analysis to get started!
-                        </td>
-                      </tr>
-                    ) : (
-                      leads.map(lead => (
+                    {(() => {
+                      // Filter leads based on status and date range
+                      let filteredLeads = leads;
+                      
+                      // Filter by status
+                      if (crmFilterStatus) {
+                        filteredLeads = filteredLeads.filter(lead => lead.status === crmFilterStatus);
+                      }
+                      
+                      // Filter by date from
+                      if (crmFilterDateFrom) {
+                        const fromDate = new Date(crmFilterDateFrom);
+                        fromDate.setHours(0, 0, 0, 0);
+                        filteredLeads = filteredLeads.filter(lead => {
+                          if (!lead.created_at) return false;
+                          const leadDate = new Date(lead.created_at);
+                          leadDate.setHours(0, 0, 0, 0);
+                          return leadDate >= fromDate;
+                        });
+                      }
+                      
+                      // Filter by date to
+                      if (crmFilterDateTo) {
+                        const toDate = new Date(crmFilterDateTo);
+                        toDate.setHours(23, 59, 59, 999);
+                        filteredLeads = filteredLeads.filter(lead => {
+                          if (!lead.created_at) return false;
+                          const leadDate = new Date(lead.created_at);
+                          return leadDate <= toDate;
+                        });
+                      }
+                      
+                      if (filteredLeads.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
+                              {leads.length === 0 ? 'No leads yet. Run an analysis to get started!' : 'No leads match the selected filters.'}
+                            </td>
+                          </tr>
+                        );
+                      }
+                      
+                      return filteredLeads.map(lead => (
                         <tr 
                           key={lead.id} 
                           className="hover:bg-slate-50 transition-colors"
@@ -1435,8 +1605,8 @@ Best,
                             </span>
                           </td>
                         </tr>
-                      ))
-                    )}
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -1798,6 +1968,39 @@ Let me know what you think.
                     />
                     <p className="text-xs text-slate-500 mt-1">
                       Leave empty to search everywhere
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Number of Reviews (Filter)
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-slate-600 mb-1">Min Reviews</label>
+                        <input
+                          type="number"
+                          value={minReviews}
+                          onChange={(e) => setMinReviews(Number(e.target.value))}
+                          min={0}
+                          placeholder="0"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-600 mb-1">Max Reviews</label>
+                        <input
+                          type="number"
+                          value={maxReviews}
+                          onChange={(e) => setMaxReviews(Number(e.target.value))}
+                          min={0}
+                          placeholder="10000"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Filter businesses by review count range
                     </p>
                   </div>
 

@@ -2,6 +2,26 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [1.2.1] - 2024-12-11
+
+### 🐛 Bug Fixes
+
+**CRM Filter Improvements**
+- Added missing "Lead Collected" status option to filter dropdown
+- Removed invalid "New" status that wasn't in database schema
+- Filter dropdown now shows all 11 valid statuses matching database
+
+**Select All Behavior Fix**
+- "Select All" checkbox now respects active filters
+- When filter is active, selecting all only selects filtered leads (not all leads)
+- Fixed misleading selection count - now accurately shows filtered selection count
+- Example: With 60 "Lead Collected" leads filtered, "Select All" now selects 60 (not all 105)
+
+**Filter Result Display**
+- Added "Showing X of Y leads" counter when filters are active
+- Clearly separates checkbox selection count from filter result count
+- Improved UX clarity between deletion selection vs filter results
+
 ## [1.2.0] - 2024-12-10
 
 ### 🎯 Google Places: Complete Lead Tracking & Management System

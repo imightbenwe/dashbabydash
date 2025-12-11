@@ -2,7 +2,7 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
-## [1.2.1] - 2024-12-11
+## [1.2.1] - 2025-12-11
 
 ### 🐛 Bug Fixes
 
@@ -22,7 +22,7 @@ All notable changes to PersonaAI will be documented in this file.
 - Clearly separates checkbox selection count from filter result count
 - Improved UX clarity between deletion selection vs filter results
 
-## [1.2.0] - 2024-12-10
+## [1.2.0] - 2025-12-10
 
 ### 🎯 Google Places: Complete Lead Tracking & Management System
 
@@ -208,7 +208,7 @@ Users must run `DISMISSED_LEADS_MIGRATION.sql` in Supabase SQL Editor to:
 
 ---
 
-## [1.1.1] - 2024-12-10
+## [1.1.1] - 2025-12-10
 
 ### 🔧 Bug Fixes & Improvements
 
@@ -272,7 +272,7 @@ Users must run `DISMISSED_LEADS_MIGRATION.sql` in Supabase SQL Editor to:
 
 ---
 
-## [1.1.0] - 2024-12-10
+## [1.1.0] - 2025-12-10
 
 ### 🎨 Lead Detail Page UI Improvements
 
@@ -338,7 +338,7 @@ Users must run `DISMISSED_LEADS_MIGRATION.sql` in Supabase SQL Editor to:
 
 ---
 
-## [1.0.0] - 2024-12-04
+## [1.0.0] - 2025-12-04
 
 ### 🎉 Initial Release - Full Functional Implementation
 
@@ -467,7 +467,7 @@ Users must run `DISMISSED_LEADS_MIGRATION.sql` in Supabase SQL Editor to:
 
 ---
 
-## [0.1.0] - 2024-12-04
+## [0.1.0] - 2025-12-04
 
 ### Initial Setup
 - Next.js 16 project initialization

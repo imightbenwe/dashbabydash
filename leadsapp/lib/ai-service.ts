@@ -306,11 +306,12 @@ export async function generateEmailWithOpenAI(
       'I help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\n\n' +
       'If you want, I can take a quick look and tell you exactly where the bottleneck is.\n\n' +
       'Would that be useful?\n\n' +
-      'Cheers,\n\n' +
+      'Cheers,\n' +
+      'Koen\n\n' +
       'Return JSON:\n' +
       '{\n' +
       '  "subject": "Your subject line here (6-7 words max)",\n' +
-      '  "body": "Hi ' + firstName + ',\\n\\n' + emailOpening + '\\n\\nQuick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\\n\\nI help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\\n\\nIf you want, I can take a quick look and tell you exactly where the bottleneck is.\\n\\nWould that be useful?\\n\\nCheers,"\n' +
+      '  "body": "Hi ' + firstName + ',\\n\\n' + emailOpening + '\\n\\nQuick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\\n\\nI help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\\n\\nIf you want, I can take a quick look and tell you exactly where the bottleneck is.\\n\\nWould that be useful?\\n\\nCheers,\\nKoen"\n' +
       '}';
   } else if (emailType === 'follow_up_1') {
     userPrompt = 'Write the "Made your site live" follow-up email to ' + prospectName + '.\n\n' +

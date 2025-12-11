@@ -29,26 +29,33 @@ export async function POST(request: NextRequest) {
           const html = response.data;
           const $ = cheerio.load(html);
 
-          // Remove unwanted elements
-          $('script, style, nav, footer, iframe, noscript').remove();
+          // Remove unwanted elements - expanded to include navigation, menus, and other boilerplate
+          $('script, style, nav, footer, iframe, noscript, header, .nav, .navigation, .menu, .header, .footer, .sidebar, [class*="nav"], [class*="menu"], [id*="nav"], [id*="menu"], [id*="header"], [id*="footer"]').remove();
 
           // Extract metadata
           const title = $('title').text().trim() || $('h1').first().text().trim();
           const description = $('meta[name="description"]').attr('content') || '';
           
-          // Extract all headings
+          // Extract all headings (with deduplication)
           const headings: string[] = [];
-          $('h1, h2, h3').each((_, el) => {
+          const seenHeadings = new Set<string>();
+          $('h1, h2, h3, h4, .wsite-content-title, [class*="heading"], [class*="title"]').each((_, el) => {
             const text = $(el).text().trim();
-            if (text) headings.push(text);
+            if (text && !seenHeadings.has(text.toLowerCase())) {
+              headings.push(text);
+              seenHeadings.add(text.toLowerCase());
+            }
           });
 
-          // Extract all paragraphs
+          // Extract all paragraphs and content divs (with deduplication)
           const paragraphs: string[] = [];
-          $('p').each((_, el) => {
+          const seenParagraphs = new Set<string>();
+          $('p, .paragraph, [class*="content"], [class*="description"], [class*="text"], article').each((_, el) => {
             const text = $(el).text().trim();
-            if (text && text.length > 20) { // Skip very short paragraphs
+            // Skip very short paragraphs and duplicates
+            if (text && text.length > 20 && !seenParagraphs.has(text.toLowerCase())) {
               paragraphs.push(text);
+              seenParagraphs.add(text.toLowerCase());
             }
           });
 
@@ -63,11 +70,44 @@ export async function POST(request: NextRequest) {
             }
           });
 
-          // Extract main content text (clean)
-          const bodyText = $('body').text()
+          // Extract main content text - prioritize main content areas
+          let contentText = '';
+          
+          // Try to find main content area first
+          const mainContentSelectors = [
+            'main',
+            '[role="main"]',
+            '#main',
+            '#content',
+            '#main-content',
+            '.main-content',
+            '.content',
+            '#wsite-content',
+            '.wsite-section-content',
+            'article',
+            '.post-content',
+            '.entry-content'
+          ];
+          
+          for (const selector of mainContentSelectors) {
+            const mainContent = $(selector);
+            if (mainContent.length > 0) {
+              contentText = mainContent.text();
+              break;
+            }
+          }
+          
+          // Fallback to body if no main content found
+          if (!contentText) {
+            contentText = $('body').text();
+          }
+          
+          // Clean and normalize the text
+          const bodyText = contentText
             .replace(/\s+/g, ' ') // Normalize whitespace
+            .replace(/\n+/g, '\n') // Normalize newlines
             .trim()
-            .substring(0, 5000); // Limit to first 5000 chars
+            .substring(0, 10000); // Increased limit to 10000 chars
 
           return {
             url,

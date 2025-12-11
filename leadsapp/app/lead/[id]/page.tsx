@@ -253,6 +253,36 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     }
   };
 
+  const handleSendToGmail = async (email: any) => {
+    try {
+      // Update lead status to "email_1_sent"
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'email_1_sent',
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setEditedStatus('email_1_sent');
+        if (lead) {
+          lead.status = 'email_1_sent';
+        }
+      }
+
+      // Open Gmail compose window
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(editedEmail)}&su=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`;
+      window.open(gmailUrl, '_blank');
+    } catch (err) {
+      console.error('Failed to update lead status:', err);
+      // Still open Gmail even if status update fails
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(editedEmail)}&su=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`;
+      window.open(gmailUrl, '_blank');
+    }
+  };
+
   const scrapeWebsiteData = async () => {
     if (!lead?.website) {
       alert('No website URL available to scrape');
@@ -1677,12 +1707,13 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
             >
               <Mail className="w-4 h-4" /> {isGeneratingFollowUp ? 'Generating...' : 'Generate Follow-up Email'}
             </button>
-            <button className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg">
+            {/* Legacy functions - archived */}
+            {/* <button className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg">
               Generate Website Mockup
             </button>
             <button className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg">
               Export to PDF
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -1702,15 +1733,23 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
                         {new Date(email.created_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(`Subject: ${email.subject}\n\n${email.body}`);
-                        alert('Email copied to clipboard!');
-                      }}
-                      className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-                    >
-                      Copy
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`Subject: ${email.subject}\n\n${email.body}`);
+                          alert('Email copied to clipboard!');
+                        }}
+                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                      >
+                        Copy
+                      </button>
+                      <button
+                        onClick={() => handleSendToGmail(email)}
+                        className="text-xs text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
+                      >
+                        <Mail className="w-3 h-3" /> Send to Gmail
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <div>

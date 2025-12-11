@@ -2,6 +2,23 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.1.0] - 2025-12-11
+
+### Added
+- **Gmail Integration**: Added "Send to Gmail" button next to Copy button in Generated Emails section
+  - Opens Gmail compose window with pre-filled recipient, subject, and body
+  - Automatically updates lead status to "Email 1 sent" when clicked
+  - Works with free Gmail accounts (no Google Workspace required)
+  - Gmail signature/footer automatically included by Gmail
+
+### Changed
+- **Email Template**: Updated initial email signature to include "Koen" after "Cheers,"
+- **UI Cleanup**: Archived legacy "Generate Website Mockup" and "Export to PDF" buttons (commented out)
+
+### Fixed
+- Status dropdown now correctly updates when Gmail integration button is clicked
+- Fixed status value format from spaces to underscores (e.g., "email_1_sent")
+
 ## [2.0.0] - 2025-12-11
 
 ### 🎉 Major Refactoring - 96% Code Reduction

@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       .from('leads')
       .select('id, name, website')
       .eq('automation_stage', 0)
+      .eq('status', 'lead_collected') // Only automate new leads, not already-contacted ones
       .lte('created_at', twoMinutesAgo)
       .not('website', 'is', null)
       .limit(10); // Process max 10 at a time to avoid overload

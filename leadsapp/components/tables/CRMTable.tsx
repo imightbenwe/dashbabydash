@@ -21,6 +21,7 @@ export function CRMTable() {
   
   // Filter state
   const [filterStatus, setFilterStatus] = useState<LeadStatus | ''>('');
+  const [filterAutomationStage, setFilterAutomationStage] = useState<number | ''>('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
 
@@ -40,6 +41,10 @@ export function CRMTable() {
 
     if (filterStatus) {
       result = result.filter(lead => lead.status === filterStatus);
+    }
+
+    if (filterAutomationStage !== '') {
+      result = result.filter(lead => (lead.automation_stage ?? 0) === filterAutomationStage);
     }
 
     if (filterDateFrom) {
@@ -64,7 +69,7 @@ export function CRMTable() {
     }
 
     return result;
-  }, [leads, filterStatus, filterDateFrom, filterDateTo]);
+  }, [leads, filterStatus, filterAutomationStage, filterDateFrom, filterDateTo]);
 
   // Paginate filtered leads
   const totalPages = Math.ceil(filteredLeads.length / leadsPerPage);
@@ -77,7 +82,7 @@ export function CRMTable() {
     setCurrentPage(1);
   }, [filterStatus, filterDateFrom, filterDateTo]);
 
-  const hasActiveFilters = filterStatus || filterDateFrom || filterDateTo;
+  const hasActiveFilters = filterStatus || filterAutomationStage !== '' || filterDateFrom || filterDateTo;
 
   const handleDeleteSelected = async () => {
     if (selectedLeads.size === 0) return;
@@ -114,6 +119,7 @@ export function CRMTable() {
 
   const clearFilters = () => {
     setFilterStatus('');
+    setFilterAutomationStage('');
     setFilterDateFrom('');
     setFilterDateTo('');
   };
@@ -210,6 +216,18 @@ export function CRMTable() {
             <option value="won">Won</option>
             <option value="lost">Lost</option>
             <option value="site_live">Site Live</option>
+          </select>
+
+          <select
+            value={filterAutomationStage}
+            onChange={(e) => setFilterAutomationStage(e.target.value === '' ? '' : Number(e.target.value))}
+            className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          >
+            <option value="">All Automation</option>
+            <option value="-1">❌ Error</option>
+            <option value="0">⏳ Queued</option>
+            <option value="1">🔍 Scraped</option>
+            <option value="2">✅ Analyzed</option>
           </select>
 
           <input

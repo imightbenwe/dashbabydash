@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
 import { extractInstagramAnalytics, formatAnalyticsForPrompt, type InstagramAnalytics } from './instagram-analytics';
+import { logger } from './logger';
+import type { InstagramData, GeminiAnalysisResponse, OpenAIAnalysisResponse } from './types';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -12,17 +14,18 @@ const gemini = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-export type CombinedData = {
+export interface CombinedData {
   prospectName: string;
   company: string;
-  instagramData?: any;
+  email?: string;
+  instagramData?: InstagramData;
   websiteData?: string;
   substackData?: string;
   threadsData?: string;
   otherData?: string;
-};
+}
 
-export async function analyzeWithGemini(data: CombinedData) {
+export async function analyzeWithGemini(data: CombinedData): Promise<GeminiAnalysisResponse> {
   // Extract Instagram analytics if available
   let instagramAnalytics: InstagramAnalytics | null = null;
   let analyticsForPrompt = '';
@@ -32,7 +35,7 @@ export async function analyzeWithGemini(data: CombinedData) {
       instagramAnalytics = extractInstagramAnalytics(data.instagramData);
       analyticsForPrompt = formatAnalyticsForPrompt(instagramAnalytics);
     } catch (error) {
-      console.error('Failed to extract Instagram analytics:', error);
+      logger.error('Failed to extract Instagram analytics', error);
     }
   }
 

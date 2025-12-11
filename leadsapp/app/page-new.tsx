@@ -7,11 +7,13 @@
 
 import { useState } from 'react';
 import { Users, Brain, Database, MapPin, Globe, FileText } from 'lucide-react';
-import { NewAnalysisForm } from '@/components/forms/NewAnalysisForm';
-import { CRMTable } from '@/components/tables/CRMTable';
-import { GooglePlacesSearch } from '@/components/places/GooglePlacesSearch';
-import { DemoGenerator } from '@/components/demo/DemoGenerator';
-import { WebsiteScraper } from '@/components/scraper/WebsiteScraper';
+import {
+  NewAnalysisForm,
+  CRMTable,
+  GooglePlacesSearch,
+  DemoGenerator,
+  WebsiteScraper,
+} from '@/components';
 
 type Tab = 'crm' | 'new-analysis' | 'google-places' | 'demo-generator' | 'website-scraper';
 

@@ -81,8 +81,9 @@ export async function POST(request: NextRequest) {
           // Save scraped data to raw_data_sources
           await supabaseAdmin.from('raw_data_sources').insert({
             lead_id: lead.id,
-            source_type: 'website_scrape',
-            raw_data: scrapedContent,
+            source_type: 'website',
+            file_name: 'website_scraped',
+            raw_content: { text: scrapedContent },
           });
 
           // Update lead with extracted email and move to Stage 1

@@ -255,12 +255,13 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
 
   const handleSendToGmail = async (email: any) => {
     try {
-      // Update lead status to "email_1_sent"
+      // Update lead status to "email_1_sent" and set date_contacted
       const response = await fetch(`/api/leads/${leadId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'email_1_sent',
+          date_contacted: new Date().toISOString(),
         }),
       });
 
@@ -992,10 +993,17 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
                   } else {
                     // Auto-save status change
                     try {
+                      const updateData: any = { status: newStatus };
+                      
+                      // Set date_contacted when first email is sent
+                      if (newStatus === 'email_1_sent' && lead.status === 'lead_collected') {
+                        updateData.date_contacted = new Date().toISOString();
+                      }
+                      
                       const response = await fetch(`/api/leads/${leadId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: newStatus }),
+                        body: JSON.stringify(updateData),
                       });
                       if (response.ok) {
                         const data = await response.json();

@@ -282,7 +282,16 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
         {googlePlacesView === 'search' && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Search Google Places</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-slate-900">Search Google Places</h2>
+                <a 
+                  href="/api/places/search-log" 
+                  target="_blank"
+                  className="text-xs text-slate-500 hover:text-indigo-600 underline"
+                >
+                  View search log
+                </a>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <input

@@ -75,15 +75,25 @@ Find and extract:
 4. Their communication tone and style
 5. Their pain points and triggers
 6. EMAIL OPENING SENTENCE:
-   Write one short, natural opening line for a cold email.
-   You may only reference one broad theme from the lead's website or Instagram — not multiple.
-   The line must sound like someone glanced at their brand, not like someone studied them.
-   Do not mention schedules, events, workshops, trainings, pricing, locations, dates, captions, or any detail that feels "insider."
-   Do not summarize their offerings.
-   Do not restate slogans or taglines.
-   Do not tell them what they do; simply acknowledge the general vibe or intention behind their work (rest, nervous system support, sound healing, breathwork, community, etc.).
-   Keep the line under 18 words.
-   Tone: warm, calm, human, lightly personalized — nothing dramatic or "marketing-y."
+   Write one short, natural opening line for a cold email that references something SPECIFIC about their brand/business.
+   
+   GOOD EXAMPLES (specific, observational, grounded in their actual work):
+   - "I really like how Beacon Healing Massage carries such a gentle, loving-kindness energy in its name alone."
+   - "The way you describe somatic healing as 'coming home to your body' really stuck with me."
+   - "I noticed how your approach to breathwork centers on safety and nervous system regulation."
+   
+   BAD EXAMPLES (generic, fake-sounding, could apply to anyone):
+   - "Your work in massage therapy truly highlights the healing power of touch."
+   - "It's inspiring how you help people on their healing journey."
+   - "I love the transformational work you're doing in the wellness space."
+   
+   RULES:
+   - Reference something SPECIFIC: their business name, a unique phrase they use, their particular approach/focus
+   - Sound like a real human who briefly looked at their work, not like AI or a sales pitch
+   - Do NOT use generic phrases like "healing journey," "transformational work," "power of touch"
+   - Do NOT tell them what their profession does in general - reference THEIR specific angle
+   - Keep it under 18 words
+   - Tone: observational, genuine, calm - like you're pointing out something you noticed
 
 Provide a JSON response:
 {
@@ -290,14 +300,11 @@ export async function generateEmailWithOpenAI(
     const emailOpening = analysis.emailOpening || 
       'I came across your work and it really resonated with me.';
     
-    userPrompt = 'Generate a cold email using EXACTLY this template.\n\n' +
+    userPrompt = 'Generate a cold email. DO NOT change the subject line.\n\n' +
+      'SUBJECT LINE (MANDATORY - USE EXACTLY AS WRITTEN):\n' +
+      'Quick note after seeing your work\n\n' +
       'EMAIL OPENING (already personalized): ' + emailOpening + '\n\n' +
-      'SUBJECT LINE TASK:\n' +
-      'Write one short, low-hype subject line based on the opening context.\n' +
-      'Max 6-7 words total.\n' +
-      'Avoid spammy words (free, discount, urgent, guarantee, etc.).\n' +
-      'Examples: "Quick question about your breathwork", "Small idea for your practice"\n\n' +
-      'EMAIL BODY:\n' +
+      'EMAIL BODY TEMPLATE:\n' +
       'Hi ' + firstName + ',\n\n' +
       emailOpening + '\n\n' +
       'Quick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\n\n' +
@@ -306,10 +313,12 @@ export async function generateEmailWithOpenAI(
       'Would that be useful?\n\n' +
       'Cheers,\n' +
       'Koen\n\n' +
-      'Return JSON:\n' +
+      'OUTPUT FORMAT (JSON):\n' +
       '{\n' +
-      '  "subject": "Your subject line here (6-7 words max)",\n' +
+      '  "subject": "Quick note after seeing your work",\n' +
       '  "body": "Hi ' + firstName + ',\\n\\n' + emailOpening + '\\n\\nQuick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\\n\\nI help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\\n\\nIf you want, I can take a quick look and tell you exactly where the bottleneck is.\\n\\nWould that be useful?\\n\\nCheers,\\nKoen"\n' +
+      '}\n\n' +
+      'CRITICAL: The subject field MUST be exactly "Quick note after seeing your work" - do not change it.';
       '}';
   } else if (emailType === 'follow_up_1') {
     userPrompt = 'Write the "Made your site live" follow-up email to ' + prospectName + '.\n\n' +

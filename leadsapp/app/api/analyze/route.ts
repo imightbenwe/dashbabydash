@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { analyzeWithGemini, analyzeWithOpenAI, generateEmailWithOpenAI } from '@/lib/ai-service';
+import emailTemplates from '@/lib/email-templates.json';
 
 export async function POST(request: NextRequest) {
   console.log('📥 POST /api/analyze - Request received');
@@ -135,46 +136,46 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 3. Run AI analyses in parallel
-    const [geminiAnalysis, openaiAnalysis] = await Promise.all([
-      analyzeWithGemini(combinedData).catch(err => {
-        console.error('Gemini analysis failed:', err);
-        return null;
-      }),
-      analyzeWithOpenAI(combinedData).catch(err => {
-        console.error('OpenAI analysis failed:', err);
-        return null;
-      }),
-    ]);
+    // 3. Run AI analysis (OpenAI only)
+    const openaiAnalysis = await analyzeWithOpenAI(combinedData).catch(err => {
+      console.error('OpenAI analysis failed:', err);
+      return null;
+    });
+    
+    // Gemini analysis disabled - not used for email generation
+    // const geminiAnalysis = await analyzeWithGemini(combinedData).catch(err => {
+    //   console.error('Gemini analysis failed:', err);
+    //   return null;
+    // });
 
-    // 4. Store AI analyses and extract Instagram analytics
+    // 4. Store AI analysis and extract Instagram analytics
     const analyses = [];
     let instagramAnalytics = null;
     
-    if (geminiAnalysis) {
-      // Extract Instagram analytics from analysis
-      if (geminiAnalysis._instagramAnalytics) {
-        instagramAnalytics = geminiAnalysis._instagramAnalytics;
-      }
-      
-      const { data: geminiRecord } = await supabaseAdmin
-        .from('ai_analyses')
-        .insert({
-          lead_id: lead.id,
-          llm_provider: 'gemini',
-          tone_keywords: geminiAnalysis.toneKeywords || [],
-          story_arc: geminiAnalysis.storyArc || null,
-          key_triggers: geminiAnalysis.keyTriggers || [],
-          full_response: geminiAnalysis,
-        })
-        .select()
-        .single();
-      
-      if (geminiRecord) analyses.push(geminiRecord);
-    }
+    // Gemini analysis storage disabled
+    // if (geminiAnalysis) {
+    //   if (geminiAnalysis._instagramAnalytics) {
+    //     instagramAnalytics = geminiAnalytics._instagramAnalytics;
+    //   }
+    //   
+    //   const { data: geminiRecord } = await supabaseAdmin
+    //     .from('ai_analyses')
+    //     .insert({
+    //       lead_id: lead.id,
+    //       llm_provider: 'gemini',
+    //       tone_keywords: geminiAnalysis.toneKeywords || [],
+    //       story_arc: geminiAnalysis.storyArc || null,
+    //       key_triggers: geminiAnalysis.keyTriggers || [],
+    //       full_response: geminiAnalysis,
+    //     })
+    //     .select()
+    //     .single();
+    //   
+    //   if (geminiRecord) analyses.push(geminiRecord);
+    // }
 
     if (openaiAnalysis) {
-      // Extract Instagram analytics from analysis (prefer OpenAI if both exist)
+      // Extract Instagram analytics from analysis
       if (openaiAnalysis._instagramAnalytics) {
         instagramAnalytics = openaiAnalysis._instagramAnalytics;
       }
@@ -224,30 +225,36 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Instagram analytics saved: ${instagramAnalytics.totalPostsAnalyzed} posts, top commenter: @${instagramAnalytics.topCommenterUsername}`);
     }
 
-    // 5. Generate initial email using best analysis (prefer OpenAI)
-    const analysisForEmail = openaiAnalysis || geminiAnalysis;
+    // 5. Generate initial email directly from analysis (no LLM needed)
     let emailData = null;
 
-    if (analysisForEmail) {
+    if (openaiAnalysis) {
       try {
-        emailData = await generateEmailWithOpenAI(prospectName, analysisForEmail, 'initial');
+        const firstName = prospectName.split(' ')[0];
+        const emailOpening = openaiAnalysis.emailOpening || 'I came across your work and it really resonated with me.';
         
-        if (emailData) {
-          await supabaseAdmin.from('generated_emails').insert({
-            lead_id: lead.id,
-            email_type: 'initial',
-            subject: emailData.subject,
-            body: emailData.body,
-            llm_provider: 'openai',
-          });
-        }
+        const template = emailTemplates.initial;
+        emailData = {
+          subject: template.subject,
+          body: template.body
+            .replace('{firstName}', firstName)
+            .replace('{emailOpening}', emailOpening)
+        };
+        
+        await supabaseAdmin.from('generated_emails').insert({
+          lead_id: lead.id,
+          email_type: 'initial',
+          subject: emailData.subject,
+          body: emailData.body,
+          llm_provider: 'static_template',
+        });
       } catch (emailError) {
         console.error('Email generation failed:', emailError);
       }
     }
 
     // 6. Update lead status and score
-    const personaScore = (geminiAnalysis || openaiAnalysis) ? 'high' : 'medium';
+    const personaScore = openaiAnalysis ? 'high' : 'medium';
     await supabaseAdmin
       .from('leads')
       .update({

@@ -1,8 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 // Simple cache for Google Places searches (24 hour TTL to save API costs)
 const placesCache = new Map<string, { results: any; timestamp: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// Log search to file
+async function logSearch(query: string, location: string, resultsCount: number, cached: boolean) {
+  try {
+    const logPath = path.join(process.cwd(), 'GOOGLE_PLACES_SEARCH_LOG.md');
+    const timestamp = new Date().toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false 
+    });
+    
+    const logEntry = `**${timestamp}** | Query: "${query}" | Location: "${location || 'N/A'}" | Results: ${resultsCount} | ${cached ? '(CACHED)' : 'API CALL'}\n`;
+    
+    await fs.appendFile(logPath, logEntry, 'utf8');
+  } catch (error) {
+    console.error('Failed to log search:', error);
+    // Don't fail the request if logging fails
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +61,10 @@ export async function POST(request: NextRequest) {
       const cached = placesCache.get(cacheKey);
       if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
         console.log(`✅ Returning cached Google Places results for: ${textQuery}`);
+        
+        // Log the cached search
+        await logSearch(query, location || '', cached.results.length, true);
+        
         return NextResponse.json({
           places: cached.results,
           cached: true,
@@ -95,10 +124,11 @@ export async function POST(request: NextRequest) {
       })
       .map((place: any) => ({
         id: place.id,
+        displayName: place.displayName,
         name: place.displayName?.text || 'Unknown',
-        address: place.formattedAddress || '',
-        website: place.websiteUri || '',
-        phone: place.nationalPhoneNumber || place.internationalPhoneNumber || '',
+        formattedAddress: place.formattedAddress || '',
+        websiteUri: place.websiteUri || '',
+        nationalPhoneNumber: place.nationalPhoneNumber || place.internationalPhoneNumber || '',
         rating: place.rating || 0,
         userRatingCount: place.userRatingCount || 0,
         businessStatus: place.businessStatus || 'OPERATIONAL',
@@ -114,6 +144,9 @@ export async function POST(request: NextRequest) {
       });
       console.log(`💾 Cached ${placesWithWebsites.length} results for: ${textQuery}`);
     }
+
+    // Log the search
+    await logSearch(query, location || '', placesWithWebsites.length, false);
 
     return NextResponse.json({
       success: true,

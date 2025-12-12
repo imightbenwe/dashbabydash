@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { analyzeWithGemini, analyzeWithOpenAI, generateEmailWithOpenAI } from '@/lib/ai-service';
+import emailTemplates from '@/lib/email-templates.json';
 
 export async function POST(
   request: NextRequest,
@@ -107,22 +108,19 @@ export async function POST(
       console.log('⚠️ No first name returned by AI');
     }
 
-    // 9. Auto-generate initial email immediately
+    // 9. Auto-generate initial email directly from analysis (no LLM needed)
     console.log('📧 Auto-generating initial email...');
     try {
-      const emailData = await generateEmailWithOpenAI(
-        openaiAnalysis?.firstNameGuess || lead.name,
-        openaiAnalysis,
-        'initial',
-        undefined,
-        {
-          mutualConnection: lead.mutual_connection_name,
-          specificHookStory: lead.specific_hook_story || openaiAnalysis?.specificHookStory,
-          problemStatement: lead.problem_statement || openaiAnalysis?.websiteProblem,
-          caseStudy: lead.case_study_reference,
-          mockupSiteUrl: lead.mockup_site_url,
-        }
-      );
+      const firstName = (openaiAnalysis?.firstNameGuess || lead.name).split(' ')[0];
+      const emailOpening = openaiAnalysis?.emailOpening || 'I came across your work and it really resonated with me.';
+      
+      const template = emailTemplates.initial;
+      const emailData = {
+        subject: template.subject,
+        body: template.body
+          .replace('{firstName}', firstName)
+          .replace('{emailOpening}', emailOpening)
+      };
 
       // Delete existing initial email if any
       await supabaseAdmin
@@ -139,7 +137,7 @@ export async function POST(
           email_type: 'initial',
           subject: emailData.subject,
           body: emailData.body,
-          llm_provider: 'openai',
+          llm_provider: 'static_template',
         });
 
       console.log('✅ Initial email auto-generated successfully');

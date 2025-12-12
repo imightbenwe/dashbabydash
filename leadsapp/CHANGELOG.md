@@ -2,6 +2,45 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.3.1] - 2025-12-12
+
+### Added
+- **📊 Google Places Search Logging**: Track all search queries for analytics
+  - Logs timestamp, query, location, result count to GOOGLE_PLACES_SEARCH_LOG.md
+  - Tracks both cached and fresh API calls
+  - API endpoint `/api/places/search-log` to view log file in browser
+  - "View search log" link in Google Places module UI
+
+### Fixed
+- **Google Places Display Bug**: Fixed search results not showing business names/websites
+  - API now returns proper Google Places field structure (displayName, formattedAddress, websiteUri, nationalPhoneNumber)
+  - Previously returned simplified field names that frontend couldn't read
+  - Search results now display correctly with all business information
+
+## [2.3.0] - 2025-12-11
+
+### Added
+- **📅 Date Contacted Tracking**: Automatically records when lead status changes to "Email 1 sent"
+  - Displays in CONTACTED column in CRM table
+  - Shows exact timestamp of status change
+  - Updates on manual status change or Gmail button click
+
+### Changed
+- **🚀 AI Model Optimization**: Switched from gpt-5.1 to gpt-4o for cost savings
+  - 10-20x cost reduction while maintaining quality
+  - Fallback to gpt-4o-mini if needed
+  - Only OpenAI used (Gemini imported but not actively used)
+
+- **Automation Filtering**: Automation now only processes leads with status "lead_collected"
+  - Prevents reprocessing already contacted leads
+  - Cleaner automation queue
+  - Fixed automation saving (using correct raw_content column)
+
+### Fixed
+- Automation data saving bug (was using wrong column name raw_data instead of raw_content)
+- Automation stage filter dropdown now working in CRM table
+- Status filtering prevents automation errors on inappropriate leads
+
 ## [2.2.0] - 2025-12-11
 
 ### Added

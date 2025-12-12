@@ -1,0 +1,14 @@
+{
+  "initial": {
+    "subject": "Quick note after seeing your work",
+    "body": "Hi {firstName},\n\n{emailOpening}\n\nQuick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\n\nI help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\n\nIf you want, I can take a quick look and tell you exactly where the bottleneck is.\n\nWould that be useful?\n\nCheers,\nKoen"
+  },
+  "follow_up_1": {
+    "subject": "Made your site live",
+    "body": "{firstName}, I know you've got a million things going on. Finding time for this is tough.\n\nTBH, I was thinking about you over the weekend and got a little carried away. I was so convinced your work could look incredible that I went ahead and made your site live.\n\nHere it is: {mockupUrl}\n\nLet me know what you think.\n\nKoen"
+  },
+  "follow_up_2": {
+    "subject": "Quick follow-up",
+    "body": "{firstName},\n\nI'm sure you're swamped. Just wanted to make sure the live site link didn't get buried.\n\nIf the timing isn't right, totally understand. Just let me know either way?\n\nKoen"
+  }
+}

@@ -130,18 +130,28 @@ export async function POST(request: NextRequest) {
           }
         });
 
-        // Remove unwanted elements (but keep footer content in a separate variable first)
-        const footerContent = $('footer, .footer').text().trim();
-        $('script, style, nav, .nav, .menu, .sidebar').remove();
-        // Don't remove header and footer - they often have contact info
-
-        // Extract title
+        // Extract title first
         const title = $('title').text().trim() || $('h1').first().text().trim() || 'Untitled';
 
-        // Extract main content
-        const headings = $('h1, h2, h3').map((_, el) => $(el).text().trim()).get().join('\n');
-        const paragraphs = $('p').map((_, el) => $(el).text().trim()).get().filter(p => p.length > 20).join('\n\n');
-        const lists = $('li').map((_, el) => $(el).text().trim()).get().join('\n');
+        // Remove unwanted elements that don't contribute to main content
+        $('script, style, noscript, iframe, svg, path, img').remove();
+
+        // Get ALL visible text content from body
+        // This captures content regardless of HTML structure (divs, spans, p, etc.)
+        const bodyText = $('body').text()
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
+
+        // Also get structured content for better formatting
+        const headings = $('h1, h2, h3, h4, h5, h6').map((_, el) => $(el).text().trim()).get().filter(t => t.length > 0);
+        const paragraphs = $('p').map((_, el) => $(el).text().trim()).get().filter(p => p.length > 20);
+        const lists = $('li').map((_, el) => $(el).text().trim()).get().filter(t => t.length > 0);
+        
+        // Get text from common content containers (for Wix, Squarespace, etc.)
+        const contentDivs = $('.wsite-section-content, .sqs-block-content, .content, article, main, [role="main"]')
+          .map((_, el) => $(el).text().trim())
+          .get()
+          .filter(t => t.length > 50);
 
         // Add extracted emails and phones to content
         let contactInfo = '';
@@ -161,7 +171,17 @@ export async function POST(request: NextRequest) {
           contactInfo += `LINKEDIN FOUND: ${socialLinks.linkedin}\n`;
         }
 
-        const content = `${headings}\n\n${paragraphs}\n\n${lists}${contactInfo}`.trim();
+        // Combine all content sources - prefer structured content if available, fall back to body text
+        let mainContent = '';
+        if (contentDivs.length > 0) {
+          mainContent = contentDivs.join('\n\n');
+        } else if (headings.length > 0 || paragraphs.length > 0) {
+          mainContent = `${headings.join('\n')}\n\n${paragraphs.join('\n\n')}\n\n${lists.join('\n')}`;
+        } else {
+          mainContent = bodyText; // Fallback to all body text
+        }
+
+        const content = `${mainContent}${contactInfo}`.trim();
 
         return {
           url: pageUrl,

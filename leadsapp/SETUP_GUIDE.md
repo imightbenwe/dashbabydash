@@ -24,12 +24,7 @@ Your app is now **fully functional**! Follow these steps to complete the setup a
 - Create a new API key
 - You'll need credits in your OpenAI account
 
-#### Gemini API Key
-- Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
-- Click **Create API Key**
-- Gemini has a generous free tier!
-
-#### Google Places API Key (Optional - for Lead Scraper)
+#### Google Places API Key (for Business Search)
 - See detailed setup guide: `GOOGLE_PLACES_SETUP.md`
 - Enables searching for businesses and creating leads in bulk
 - Pay-as-you-go pricing with $200 free credit for new accounts
@@ -46,10 +41,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 # OpenAI
 OPENAI_API_KEY=sk-proj-...
 
-# Gemini
-GEMINI_API_KEY=AIza...
-
-# Google Places (Optional - for lead scraper)
+# Google Places (for business search)
 GOOGLE_PLACES_API_KEY=your_google_places_api_key_here
 ```
 
@@ -72,11 +64,13 @@ GOOGLE_PLACES_API_KEY=your_google_places_api_key_here
    - Click "Run Deep Analysis"
 
 4. **What happens**:
-   - Both Gemini and OpenAI analyze the data in parallel
+   - Website is scraped with Cheerio (if URL provided)
+   - OpenAI GPT-4o analyzes the data
    - Raw data is stored in `raw_data_sources` table
-   - AI analyses are stored in `ai_analyses` table
-   - An initial email is generated and stored in `generated_emails` table
-   - Lead is created in `leads` table with status "analysis_done"
+   - AI analysis is stored in `ai_analyses` table
+   - An initial email opening is generated and stored in `generated_emails` table
+   - Lead is created in `leads` table with status "lead_collected"
+   - Automation will continue processing after 2 minutes (scrape → analyze)
 
 5. **Check the results**:
    - View the AI-generated persona profile
@@ -150,18 +144,11 @@ npm run build
 ### Change AI Models
 Edit `lib/ai-service.ts`:
 
-**Gemini models** (December 2025):
-- `gemini-3-pro` - BEST: "Best model in the world for multimodal understanding" (DEFAULT)
-- `gemini-2.5-pro` - Advanced thinking model (FALLBACK 1)
-- `gemini-2.5-flash` - Fast, cost-effective (FALLBACK 2)
-
 **OpenAI models** (December 2025):
-- `gpt-5.1` - NEWEST: Latest GPT-5 family, November 2025 (DEFAULT)
-- `gpt-5` - Standard GPT-5, August 2025 (FALLBACK 1)
-- `o3` - Advanced reasoning model (FALLBACK 2)
-- `gpt-4o` - Reliable workhorse (FALLBACK 3)
+- `gpt-4o` - Current default (cost-optimized)
+- `gpt-4o-mini` - Fallback if primary fails
 
-The app automatically tries the newest model first and falls back to older ones if it fails!
+**Note**: Previously used Gemini and GPT-5.1, but switched to GPT-4o on Dec 11, 2025 for 10-20x cost reduction while maintaining quality.
 
 ### Adjust Prompts
 The analysis prompts are in `lib/ai-service.ts` in the `analyzeWithGemini()` and `analyzeWithOpenAI()` functions.
@@ -186,11 +173,13 @@ All tables have Row Level Security (RLS) enabled and timestamps.
 ## 🎉 You're Ready!
 
 Your PersonaAI app is now fully functional with:
-- ✅ Dual LLM analysis (Gemini + OpenAI)
-- ✅ File upload support (JSON/text)
+- ✅ AI-powered analysis (OpenAI GPT-4o)
+- ✅ Google Places business search & tracking
+- ✅ Background automation (scraping → analysis)
+- ✅ File upload support (Instagram JSON, text files)
 - ✅ Database persistence (Supabase)
-- ✅ Email generation
-- ✅ CRM/leads pipeline
+- ✅ Personalized email generation
+- ✅ CRM pipeline with status tracking
 - ✅ Real-time UI updates
 
 Start analyzing prospects and watch the AI generate personalized insights!

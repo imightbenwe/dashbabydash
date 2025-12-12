@@ -32,16 +32,24 @@ This Next.js application provides CRM functionality and generates static HTML de
 
 ### 1. Lead Analysis
 - Upload Instagram JSON, Substack, and other data files
-- Dual AI analysis using OpenAI and Google Gemini
-- Automatic email generation for prospects
+- AI-powered analysis using OpenAI GPT-4o
+- Automatic personalized email generation
+- Background automation (scraping → analysis)
 
-### 2. **Demo Generator (NEW)**
+### 2. **Google Places Integration**
+- Search businesses by query and location
+- Filter by review count (0-25 default)
+- Track leads in Open/Dismissed/Promoted tabs
+- One-click promotion to CRM with automation
+- Search history logging for analytics
+
+### 3. **Demo Generator**
 - **Paste complete HTML** to create static demo pages
 - Generates files in `/demos/client-name/` folder
 - Public URL: `dashbabydash.com/demos/client-name/`
 - Perfect for showing prospects their custom sites
 
-### 3. CRM Pipeline
+### 4. CRM Pipeline
 - Track leads through different stages
 - Update status and next actions
 - Styling with [Tailwind CSS](https://tailwindcss.com)
@@ -113,6 +121,21 @@ If you wish to just develop locally and not deploy to Vercel, [follow the steps 
 6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
 
 > Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
+
+## For AI Assistants Working on This Codebase
+
+👋 **Start here to understand the system:**
+
+1. **Read `ARCHITECTURE.md`** - Complete system reference with data flows, API routes, and component architecture
+2. **Check `CHANGELOG.md`** - Recent changes and reasoning behind decisions
+3. **Review `CODE_CLEANUP_PLAN_V2.md`** - Known improvement areas and optimization roadmap
+4. **When making changes** - Update CHANGELOG.md with reasoning for future reference
+
+**Key Architecture Notes:**
+- Uses hardcoded `userId='demo-user'` (auth TODO)
+- Automation only processes `status='lead_collected'`
+- Google Places results auto-save to Open tab
+- AI uses OpenAI GPT-4o (Gemini removed Dec 11, 2025 for cost)
 
 ## Feedback and issues
 

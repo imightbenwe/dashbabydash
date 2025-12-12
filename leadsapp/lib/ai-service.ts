@@ -1,17 +1,11 @@
 import OpenAI from 'openai';
-import { GoogleGenAI } from '@google/genai';
 import { extractInstagramAnalytics, formatAnalyticsForPrompt, type InstagramAnalytics } from './instagram-analytics';
 import { logger } from './logger';
-import type { InstagramData, GeminiAnalysisResponse, OpenAIAnalysisResponse } from './types';
+import type { InstagramData, OpenAIAnalysisResponse } from './types';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
-
-// Initialize Google GenAI client (new SDK as of Dec 2025)
-const gemini = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
 });
 
 export interface CombinedData {
@@ -23,137 +17,6 @@ export interface CombinedData {
   substackData?: string;
   threadsData?: string;
   otherData?: string;
-}
-
-export async function analyzeWithGemini(data: CombinedData): Promise<GeminiAnalysisResponse> {
-  // Extract Instagram analytics if available
-  let instagramAnalytics: InstagramAnalytics | null = null;
-  let analyticsForPrompt = '';
-  
-  if (data.instagramData) {
-    try {
-      instagramAnalytics = extractInstagramAnalytics(data.instagramData);
-      analyticsForPrompt = formatAnalyticsForPrompt(instagramAnalytics);
-    } catch (error) {
-      logger.error('Failed to extract Instagram analytics', error);
-    }
-  }
-
-  const prompt = `You are an expert OSINT researcher analyzing digital presence to find specific, personalized details for cold email outreach.
-
-Analyze the following data about ${data.prospectName}:
-
-Company: ${data.company || 'Unknown'}
-
-${analyticsForPrompt ? `\n${analyticsForPrompt}\n` : ''}
-
-${data.instagramData ? `Instagram Posts Data (Full JSON with engagement metrics): ${JSON.stringify(data.instagramData).substring(0, 5000)}` : ''}
-
-${data.websiteData ? `Website Content: ${data.websiteData.substring(0, 2000)}` : ''}
-
-${data.substackData ? `Substack Content: ${data.substackData.substring(0, 2000)}` : ''}
-
-${data.threadsData ? `Threads Content: ${data.threadsData.substring(0, 2000)}` : ''}
-
-${data.otherData ? `Other Data: ${data.otherData.substring(0, 1000)}` : ''}
-
-Find and extract:
-
-1. MOST FREQUENT COMMENTER (for mutual connection reference):
-   ${instagramAnalytics?.topCommenterUsername ? `Top commenter identified: @${instagramAnalytics.topCommenterUsername} (${instagramAnalytics.topCommenterCommentCount} comments)` : 'Parse the latestComments arrays to find who comments most frequently'}
-   
-2. A SPECIFIC defining moment, struggle, or transformation from their life (with year/timeframe if possible):
-   - Example: "I heard your story about 2010 when you discovered you were pregnant and had to choose between having a family or a career, then deciding to build your own firm to have both"
-   - Example: "I read about that freezing winter in Chicago when you and your girlfriend had to huddle around four tiny space heaters because you didn't have $300 to fix the furnace"
-   - This should be personal, specific, and demonstrate deep research
-   
-3. SPECIFIC ACHIEVEMENT with engagement data:
-   - Example: "Your post about manifestation and nervous system regulation got ~176~ views and ~35~ likes in just 3 days"
-   - Use actual numbers from the Instagram data (likesCount, videoViewCount, commentsCount)
-   - Reference their most engaging topic: ${instagramAnalytics?.mostEngagingTopic || 'analyze content to find'}
-
-4. Their communication tone and style
-5. Their pain points and triggers
-6. EMAIL OPENING SENTENCE:
-   Write one short, natural opening line for a cold email that references something SPECIFIC about their brand/business.
-   
-   GOOD EXAMPLES (specific, observational, grounded in their actual work):
-   - "I really like how Beacon Healing Massage carries such a gentle, loving-kindness energy in its name alone."
-   - "The way you describe somatic healing as 'coming home to your body' really stuck with me."
-   - "I noticed how your approach to breathwork centers on safety and nervous system regulation."
-   
-   BAD EXAMPLES (generic, fake-sounding, could apply to anyone):
-   - "Your work in massage therapy truly highlights the healing power of touch."
-   - "It's inspiring how you help people on their healing journey."
-   - "I love the transformational work you're doing in the wellness space."
-   
-   RULES:
-   - Reference something SPECIFIC: their business name, a unique phrase they use, their particular approach/focus
-   - Sound like a real human who briefly looked at their work, not like AI or a sales pitch
-   - Do NOT use generic phrases like "healing journey," "transformational work," "power of touch"
-   - Do NOT tell them what their profession does in general - reference THEIR specific angle
-   - Keep it under 18 words
-   - Tone: observational, genuine, calm - like you're pointing out something you noticed
-
-Provide a JSON response:
-{
-  "firstNameGuess": "Most likely first name extracted from the full name (e.g., 'Sarah' from 'Sarah Thompson Wellness')",
-  "topCommenter": "${instagramAnalytics?.topCommenterUsername || 'username of most frequent commenter from comments data'}",
-  "topCommenterProfilePic": "${instagramAnalytics?.topCommenterProfilePic || 'profile_pic_url from commenter data'}",
-  "specificAchievement": "Your [specific post topic] got ~${instagramAnalytics?.mostEngagingPost?.likesCount || 'XX'}~ likes and ~${instagramAnalytics?.mostEngagingPost?.commentsCount || 'XX'}~ comments",
-  "specificHookStory": "The detailed, specific story/moment from their life with context and year",
-  "toneKeywords": ["keyword1", "keyword2", "keyword3"],
-  "storyArc": "Their overall journey narrative in 2-3 sentences",
-  "keyTriggers": ["pain point 1", "pain point 2", "pain point 3"],
-  "emailOpening": "1-2 warm, natural sentences that feel like a real person briefly explored their work",
-  "engagementInsights": "Pattern you noticed: e.g., 'manifestation content gets 2x more engagement than other topics'",
-  "insights": "Additional insights about their work and achievements"
-}`;
-
-  // Try latest models with fallback (December 2025)
-  const models = [
-    'gemini-3-pro',           // NEWEST: "Best model in the world for multimodal understanding"
-    'gemini-2.5-pro',         // Fallback 1: Advanced thinking model
-    'gemini-2.5-flash',       // Fallback 2: Best price-performance
-  ];
-
-  for (let i = 0; i < models.length; i++) {
-    try {
-      console.log('Trying Gemini model: ' + models[i]);
-      const response = await gemini.models.generateContent({
-        model: models[i],
-        contents: prompt,
-      });
-      
-      const text = response.text || '';
-      
-      // Extract JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        console.log('Successfully used ' + models[i]);
-        const result = JSON.parse(jsonMatch[0]);
-        
-        // Include extracted analytics in response
-        return {
-          ...result,
-          _instagramAnalytics: instagramAnalytics
-        };
-      }
-      
-      throw new Error('Failed to parse Gemini response');
-    } catch (error) {
-      console.error(models[i] + ' failed:', error);
-      
-      // If this is the last model, throw the error
-      if (i === models.length - 1) {
-        throw error;
-      }
-      // Otherwise, continue to next model
-      console.log('Falling back to ' + models[i + 1] + '...');
-    }
-  }
-  
-  throw new Error('All Gemini models failed');
 }
 
 export async function analyzeWithOpenAI(data: CombinedData) {

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { analyzeWithGemini, analyzeWithOpenAI, generateEmailWithOpenAI } from '@/lib/ai-service';
-import emailTemplates from '@/lib/email-templates.json';
+// Commented out - only used in disabled section below
+// import { analyzeWithOpenAI, generateEmailWithOpenAI } from '@/lib/ai-service';
+// import emailTemplates from '@/lib/email-templates.json';
 
 export async function POST(request: NextRequest) {
   console.log('📥 POST /api/analyze - Request received');
@@ -16,14 +17,14 @@ export async function POST(request: NextRequest) {
     const igHandle = formData.get('igHandle') as string;
     const websiteUrl = formData.get('websiteUrl') as string;
     const profilePictureUrl = formData.get('profilePictureUrl') as string;
-    const websiteData = formData.get('websiteData') as string;
+    // const websiteData = formData.get('websiteData') as string; // Unused - only in disabled section
     
     console.log('👤 Prospect:', prospectName, 'Company:', company);
     
-    const igFile = formData.get('igFile') as File | null;
-    const substackFile = formData.get('substackFile') as File | null;
-    const threadsFile = formData.get('threadsFile') as File | null;
-    const otherFile = formData.get('otherFile') as File | null;
+    // const igFile = formData.get('igFile') as File | null; // Unused - only in disabled section
+    // const substackFile = formData.get('substackFile') as File | null; // Unused - only in disabled section
+    // const threadsFile = formData.get('threadsFile') as File | null; // Unused - only in disabled section
+    // const otherFile = formData.get('otherFile') as File | null; // Unused - only in disabled section
 
     if (!prospectName) {
       console.log('❌ No prospect name provided');
@@ -141,38 +142,10 @@ export async function POST(request: NextRequest) {
       console.error('OpenAI analysis failed:', err);
       return null;
     });
-    
-    // Gemini analysis disabled - not used for email generation
-    // const geminiAnalysis = await analyzeWithGemini(combinedData).catch(err => {
-    //   console.error('Gemini analysis failed:', err);
-    //   return null;
-    // });
 
     // 4. Store AI analysis and extract Instagram analytics
     const analyses = [];
     let instagramAnalytics = null;
-    
-    // Gemini analysis storage disabled
-    // if (geminiAnalysis) {
-    //   if (geminiAnalysis._instagramAnalytics) {
-    //     instagramAnalytics = geminiAnalytics._instagramAnalytics;
-    //   }
-    //   
-    //   const { data: geminiRecord } = await supabaseAdmin
-    //     .from('ai_analyses')
-    //     .insert({
-    //       lead_id: lead.id,
-    //       llm_provider: 'gemini',
-    //       tone_keywords: geminiAnalysis.toneKeywords || [],
-    //       story_arc: geminiAnalysis.storyArc || null,
-    //       key_triggers: geminiAnalysis.keyTriggers || [],
-    //       full_response: geminiAnalysis,
-    //     })
-    //     .select()
-    //     .single();
-    //   
-    //   if (geminiRecord) analyses.push(geminiRecord);
-    // }
 
     if (openaiAnalysis) {
       // Extract Instagram analytics from analysis

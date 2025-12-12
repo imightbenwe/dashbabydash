@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { analyzeWithGemini, analyzeWithOpenAI, generateEmailWithOpenAI } from '@/lib/ai-service';
+import { analyzeWithOpenAI, generateEmailWithOpenAI } from '@/lib/ai-service';
 import emailTemplates from '@/lib/email-templates.json';
 
 export async function POST(

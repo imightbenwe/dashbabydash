@@ -7,7 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
  * Stage 0 -> 1: Website scraping (2 min after creation)
  * Stage 1 -> 2: AI analysis (1 min after scraping)
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     console.log('🤖 Starting automation check...');
     

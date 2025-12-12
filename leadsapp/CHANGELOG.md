@@ -2,6 +2,44 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.3.3] - 2025-12-12
+
+### Added
+- **📚 ARCHITECTURE.md**: Comprehensive system reference guide (600+ lines)
+  - Complete API routes documentation with request/response formats
+  - Component architecture with props, state, and data flows
+  - Database schema with table relationships
+  - AI integration patterns and workflow diagrams
+  - Google Places workflow end-to-end
+  - Automation system documentation
+  - Common patterns and troubleshooting guide
+  - Quick reference "When asked to..." section for AI assistants
+- **🧹 CODE_CLEANUP_PLAN_V2.md**: 5-phase optimization roadmap
+  - Prioritized cleanup tasks (Phase 1-5)
+  - Identifies ~500-700 lines of dead code
+  - Type safety improvements
+  - Database query optimizations
+  - Security enhancements
+  - Each phase with time estimates and risk levels
+
+### Changed
+- **📖 Documentation Overhaul**:
+  - README.md: Removed "Dual LLM" references, added Google Places feature, added "For AI Assistants" section
+  - SETUP_GUIDE.md: Removed Gemini API setup, updated to show only OpenAI models (gpt-4o/gpt-4o-mini)
+  - Updated all docs to reflect current architecture (Dec 11, 2025 switch to OpenAI-only)
+- **Google Places Field Mapping**: Fixed business names going to wrong field
+  - Promote leads endpoint now uses `company_name` instead of `name` field
+  - Ensures consistent data structure across CRM
+
+### Removed
+- **Phase 1 Code Cleanup: Gemini Removal** (~150 lines removed)
+  - Removed `analyzeWithGemini()` function from lib/ai-service.ts
+  - Removed `@google/genai` import from lib/ai-service.ts
+  - Removed Gemini imports from app/api/analyze/route.ts and app/api/leads/[id]/run-analysis/route.ts
+  - Removed commented Gemini analysis code blocks from analyze route
+  - Kept GeminiAnalysisResponse type for backwards compatibility (reading old DB records)
+  - Note: app/api/scraper/deep and app/api/mockup/generate still use Gemini for optional features (Phase 3 cleanup)
+
 ## [2.3.2] - 2025-12-12
 
 ### Added

@@ -65,9 +65,10 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
 
   const fetchOpenLeads = async () => {
     try {
-      const response = await fetch('/api/open');
+      const response = await fetch('/api/open?userId=demo-user');
       const data = await response.json();
       if (response.ok) {
+        console.log('Open leads fetched:', data.openLeads?.length);
         setOpenLeadsList(data.openLeads || []);
       }
     } catch (err) {
@@ -77,7 +78,7 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
 
   const fetchDismissedLeads = async () => {
     try {
-      const response = await fetch('/api/dismissed');
+      const response = await fetch('/api/dismissed?userId=demo-user');
       const data = await response.json();
       if (response.ok) {
         setDismissedLeadsList(data.dismissed || []);
@@ -89,9 +90,10 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
 
   const fetchPromotedLeads = async () => {
     try {
-      const response = await fetch('/api/promoted');
+      const response = await fetch('/api/promoted?userId=demo-user');
       const data = await response.json();
       if (response.ok) {
+        console.log('Promoted leads fetched:', data.promoted?.length);
         setPromotedLeadsList(data.promoted || []);
       }
     } catch (err) {
@@ -127,7 +129,26 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
         throw new Error(data.error || 'Search failed');
       }
 
-      setSearchResults(data.places || []);
+      const places = data.places || [];
+      setSearchResults(places);
+      
+      // Auto-save all results to Open (using demo userId)
+      if (places.length > 0) {
+        await fetch('/api/open', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: 'demo-user',  // TODO: Get from auth session
+            places: places,
+            searchQuery: placesQuery,
+            searchLocation: placesLocation,
+          }),
+        });
+        
+        // Refresh Open leads and switch to Open tab
+        await fetchOpenLeads();
+        setGooglePlacesView('open');
+      }
       
       // Add to history
       const newHistory = [
@@ -172,17 +193,29 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
     const placeIds = Array.from(selectedPlaces);
     
     try {
-      await fetch('/api/leads/create-from-places', {
+      const response = await fetch('/api/leads/create-from-places', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ placeIds }),
       });
       
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create leads');
+      }
+      
+      // Clear selection and refresh data
       setSelectedPlaces(new Set());
       await Promise.all([fetchOpenLeads(), fetchPromotedLeads()]);
+      
+      // Notify parent component
       onLeadsCreated?.(placeIds.length);
+      
+      alert(`${data.leadsCreated} lead(s) created and added to CRM!`);
     } catch (err) {
-      alert('Failed to create leads');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create leads';
+      alert(errorMessage);
     }
   };
 
@@ -199,6 +232,7 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          userId: 'demo-user',
           placeId: placeToDissmiss.id,
           placeName: placeToDissmiss.name,
           reason: dismissReason || null,
@@ -398,45 +432,15 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
             {searchResults.length > 0 && (
               <div className="bg-white rounded-xl border border-slate-200 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-slate-900">{searchResults.length} Results</h3>
-                  {selectedPlaces.size > 0 && (
-                    <button
-                      onClick={handleSaveSelected}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                    >
-                      Save {selectedPlaces.size} Selected
-                    </button>
-                  )}
+                  <h3 className="font-bold text-slate-900">{searchResults.length} Results (Saved to Open)</h3>
                 </div>
                 <div className="space-y-3">
                   {searchResults.map((place) => (
                     <div
                       key={place.id}
-                      className={`border rounded-lg p-4 ${
-                        selectedPlaces.has(place.id) ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200'
-                      }`}
+                      className="border border-slate-200 rounded-lg p-4"
                     >
                       <div className="flex items-start gap-3">
-                        <div
-                          className="flex-shrink-0 mt-1 cursor-pointer"
-                          onClick={() => {
-                            const newSelection = new Set(selectedPlaces);
-                            if (newSelection.has(place.id)) {
-                              newSelection.delete(place.id);
-                            } else {
-                              newSelection.add(place.id);
-                            }
-                            setSelectedPlaces(newSelection);
-                          }}
-                        >
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                            selectedPlaces.has(place.id)
-                              ? 'border-indigo-600 bg-indigo-600'
-                              : 'border-slate-300 bg-white'
-                          }`}>
-                            {selectedPlaces.has(place.id) && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                        </div>
                         <div className="flex-1">
                           <h4 className="font-semibold text-slate-900">{place.displayName?.text || place.id}</h4>
                           {place.formattedAddress && (
@@ -487,7 +491,20 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
         {googlePlacesView === 'open' && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Open Leads ({filteredOpenLeads.length})</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-slate-900">Open Leads ({filteredOpenLeads.length})</h2>
+                <button
+                  onClick={async () => {
+                    if (confirm('Delete all open leads? This cannot be undone.')) {
+                      await fetch('/api/open/clear?userId=demo-user', { method: 'DELETE' });
+                      await fetchOpenLeads();
+                    }
+                  }}
+                  className="text-xs text-red-600 hover:text-red-700 underline"
+                >
+                  Clear All
+                </button>
+              </div>
               
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <input
@@ -511,17 +528,34 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
                 />
               </div>
 
-              {selectedPlaces.size > 0 && (
-                <div className="flex gap-3 mb-4">
-                  <button
-                    onClick={handleCreateLeadsFromSelected}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-                  >
-                    <TrendingUp className="w-4 h-4" />
-                    Create {selectedPlaces.size} Leads
-                  </button>
-                </div>
-              )}
+              <div className="flex gap-3 mb-4">
+                <button
+                  onClick={() => {
+                    const allPlaceIds = new Set(filteredOpenLeads.map(lead => lead.place_id));
+                    setSelectedPlaces(allPlaceIds);
+                  }}
+                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  Select All ({filteredOpenLeads.length})
+                </button>
+                {selectedPlaces.size > 0 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedPlaces(new Set())}
+                      className="text-sm text-slate-600 hover:text-slate-700 font-medium"
+                    >
+                      Deselect All
+                    </button>
+                    <button
+                      onClick={handleCreateLeadsFromSelected}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+                    >
+                      <TrendingUp className="w-4 h-4" />
+                      Create {selectedPlaces.size} Leads
+                    </button>
+                  </>
+                )}
+              </div>
 
               <div className="space-y-3">
                 {filteredOpenLeads.map((lead) => (
@@ -556,16 +590,32 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
                         <h4 className="font-semibold text-slate-900">{lead.place_name}</h4>
                         {lead.address && <p className="text-sm text-slate-600 mt-1">{lead.address}</p>}
                         {lead.phone && <p className="text-sm text-slate-500 mt-1">📞 {lead.phone}</p>}
+                        {lead.rating && (
+                          <p className="text-sm text-amber-600 mt-1">
+                            ⭐ {lead.rating.toFixed(1)} ({lead.user_rating_count || 0} reviews)
+                          </p>
+                        )}
                         <div className="flex items-center justify-between mt-3">
-                          <div className="flex gap-3">
+                          <div className="flex items-center gap-3">
                             {lead.website && (
                               <a
                                 href={lead.website}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
                               >
+                                <Globe className="w-4 h-4" />
                                 Website
+                              </a>
+                            )}
+                            {lead.google_maps_uri && (
+                              <a
+                                href={lead.google_maps_uri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-slate-600 hover:text-slate-700 font-medium"
+                              >
+                                Maps
                               </a>
                             )}
                           </div>

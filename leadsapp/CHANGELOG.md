@@ -2,14 +2,43 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
-## [2.3.1] - 2025-12-12
+## [2.3.2] - 2025-12-12
 
 ### Added
 - **📊 Google Places Search Logging**: Track all search queries for analytics
-  - Logs timestamp, query, location, result count to GOOGLE_PLACES_SEARCH_LOG.md
+  - Logs timestamp, query, location, review filters (min-max), result count to GOOGLE_PLACES_SEARCH_LOG.md
   - Tracks both cached and fresh API calls
   - API endpoint `/api/places/search-log` to view log file in browser
   - "View search log" link in Google Places module UI
+
+### Changed
+- **🔄 Google Places Workflow Improvements**:
+  - Search results now automatically save to Open tab (no manual "Save Selected" needed)
+  - After search completes, automatically switches to Open tab
+  - Open tab shows full business info: name, address, phone, rating, website link, Google Maps link
+  - Added "Select All" and "Deselect All" buttons for bulk operations
+  - Added "Clear All" button to remove all open leads at once
+
+### Fixed
+- **Google Places Field Mapping**: Fixed API data structure inconsistencies
+  - Open tab now displays website links correctly
+  - Fixed field mapping: websiteUri → website, formattedAddress → address, nationalPhoneNumber → phone
+  - Old records need to be cleared and re-searched to get correct data
+- **Promote Leads**: Fixed "Create X Leads" functionality
+  - Created `/api/leads/create-from-places` endpoint
+  - Leads properly added to CRM with `status='lead_collected'` and `automation_stage=0`
+  - Open count decreases, Promoted count increases correctly
+  - Removed invalid `source` field from lead creation
+- **Dismiss Leads**: Fixed dismiss button not working
+  - Added userId to dismiss API calls
+  - Dismissed leads now properly move from Open to Dismissed tab
+  - Tab counts update correctly
+
+### Removed
+- Cleaned up 23 obsolete files (old SQL migrations, outdated docs, test files)
+- Removed confusing "Save Selected" button from search results
+
+## [2.3.1] - 2025-12-12
 
 ### Fixed
 - **Google Places Display Bug**: Fixed search results not showing business names/websites

@@ -7,7 +7,14 @@ const placesCache = new Map<string, { results: any; timestamp: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 // Log search to file
-async function logSearch(query: string, location: string, resultsCount: number, cached: boolean) {
+async function logSearch(
+  query: string, 
+  location: string, 
+  resultsCount: number, 
+  cached: boolean,
+  minReviews?: number,
+  maxReviews?: number
+) {
   try {
     const logPath = path.join(process.cwd(), 'GOOGLE_PLACES_SEARCH_LOG.md');
     const timestamp = new Date().toLocaleString('en-US', { 
@@ -20,7 +27,14 @@ async function logSearch(query: string, location: string, resultsCount: number, 
       hour12: false 
     });
     
-    const logEntry = `**${timestamp}** | Query: "${query}" | Location: "${location || 'N/A'}" | Results: ${resultsCount} | ${cached ? '(CACHED)' : 'API CALL'}\n`;
+    let reviewFilter = '';
+    if (minReviews !== undefined || maxReviews !== undefined) {
+      const min = minReviews ?? 0;
+      const max = maxReviews ?? '∞';
+      reviewFilter = ` | Reviews: ${min}-${max}`;
+    }
+    
+    const logEntry = `**${timestamp}** | Query: "${query}" | Location: "${location || 'N/A'}"${reviewFilter} | Results: ${resultsCount} | ${cached ? '(CACHED)' : 'API CALL'}\n`;
     
     await fs.appendFile(logPath, logEntry, 'utf8');
   } catch (error) {
@@ -63,7 +77,7 @@ export async function POST(request: NextRequest) {
         console.log(`✅ Returning cached Google Places results for: ${textQuery}`);
         
         // Log the cached search
-        await logSearch(query, location || '', cached.results.length, true);
+        await logSearch(query, location || '', cached.results.length, true, minReviews, maxReviews);
         
         return NextResponse.json({
           places: cached.results,
@@ -146,7 +160,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the search
-    await logSearch(query, location || '', placesWithWebsites.length, false);
+    await logSearch(query, location || '', placesWithWebsites.length, false, minReviews, maxReviews);
 
     return NextResponse.json({
       success: true,

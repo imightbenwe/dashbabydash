@@ -220,10 +220,8 @@ export async function analyzeWithOpenAI(data: CombinedData) {
 
   // Try latest models with fallback (December 2025)
   const models = [
-    'gpt-5.1',                // NEWEST: Latest GPT-5 family (Nov 2025)
-    'gpt-5',                  // Fallback 1: Standard GPT-5 (Aug 2025)
-    'o3',                     // Fallback 2: Advanced reasoning model
-    'gpt-4o',                 // Fallback 3: Reliable GPT-4o
+    'gpt-4o',                 // Primary: Fast, cheap, excellent quality
+    'gpt-4o-mini',            // Fallback: Ultra cheap, still very capable
   ];
 
   for (let i = 0; i < models.length; i++) {
@@ -362,7 +360,7 @@ export async function generateEmailWithOpenAI(
   }
 
   try {
-    const models = ['gpt-5.1', 'gpt-5', 'o3', 'gpt-4o'];
+    const models = ['gpt-4o', 'gpt-4o-mini'];
     
     for (const model of models) {
       try {

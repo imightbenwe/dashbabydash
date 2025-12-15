@@ -2,6 +2,19 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.3.4] - 2025-12-15
+
+### Fixed
+- **✅ Follow-up Timeline Terminal Status Handling**: Complete fix for terminal outcomes
+  - Timeline now properly displays terminal status events (Reply: Not a Fit, Won, Lost, Call Booked, etc.)
+  - All unsent follow-ups automatically marked as "Cancelled - outcome reached" when terminal status is set
+  - Visual indicators show orange/red terminal events with explanatory messages
+  - Added support for 8 terminal statuses: `email_bounced`, `replied_not_fit`, `replied_interested`, `call_booked`, `call_done_thinking`, `won`, `lost`, `site_live`
+  - Automation properly excludes all terminal statuses from follow-up queries
+  - Implements core rule: Status changes explicitly trigger timeline mutations and cancel downstream steps
+  - Component: `components/gmail/FollowupTimeline.tsx`
+  - API: `app/api/gmail/check-followups/route.ts`
+
 ## [2.3.3] - 2025-12-12
 
 ### Added

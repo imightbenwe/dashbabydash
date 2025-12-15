@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { Calendar, Filter, X } from 'lucide-react';
 import { useLeads } from '@/lib/hooks';
 import type { LeadStatus } from '@/lib/types';
+import { FollowupTimeline } from '@/components/gmail/FollowupTimeline';
 
 export function CRMTable() {
   const router = useRouter();
@@ -24,6 +25,15 @@ export function CRMTable() {
   const [filterAutomationStage, setFilterAutomationStage] = useState<number | ''>('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Date editing state
+  const [editingDateLeadId, setEditingDateLeadId] = useState<string | null>(null);
+  const [tempDateValue, setTempDateValue] = useState('');
+  
+  // Bulk edit state
+  const [bulkContactedDate, setBulkContactedDate] = useState('');
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,6 +48,16 @@ export function CRMTable() {
   // Apply filters
   const filteredLeads = useMemo(() => {
     let result = leads;
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(lead => 
+        lead.name.toLowerCase().includes(query) ||
+        (lead.email && lead.email.toLowerCase().includes(query)) ||
+        (lead.company && lead.company.toLowerCase().includes(query))
+      );
+    }
 
     if (filterStatus) {
       result = result.filter(lead => lead.status === filterStatus);
@@ -69,7 +89,7 @@ export function CRMTable() {
     }
 
     return result;
-  }, [leads, filterStatus, filterAutomationStage, filterDateFrom, filterDateTo]);
+  }, [leads, filterStatus, filterAutomationStage, filterDateFrom, filterDateTo, searchQuery]);
 
   // Paginate filtered leads
   const totalPages = Math.ceil(filteredLeads.length / leadsPerPage);
@@ -80,9 +100,9 @@ export function CRMTable() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStatus, filterDateFrom, filterDateTo]);
+  }, [filterStatus, filterDateFrom, filterDateTo, searchQuery]);
 
-  const hasActiveFilters = filterStatus || filterAutomationStage !== '' || filterDateFrom || filterDateTo;
+  const hasActiveFilters = filterStatus || filterAutomationStage !== '' || filterDateFrom || filterDateTo || searchQuery;
 
   const handleDeleteSelected = async () => {
     if (selectedLeads.size === 0) return;
@@ -124,12 +144,99 @@ export function CRMTable() {
     setFilterDateTo('');
   };
 
+  const handleUpdateContactedDate = async (leadId: string, dateValue: string) => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          date_contacted: dateValue || null 
+        }),
+      });
+
+      if (response.ok) {
+        await fetchLeads(); // Refresh the list
+        setEditingDateLeadId(null);
+        setTempDateValue('');
+      } else {
+        console.error('Failed to update contacted date');
+      }
+    } catch (error) {
+      console.error('Error updating contacted date:', error);
+    }
+  };
+
+  const handleDateCellClick = (leadId: string, currentDate: string | null, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingDateLeadId(leadId);
+    // Convert ISO string to YYYY-MM-DD format for input
+    if (currentDate) {
+      const date = new Date(currentDate);
+      const dateStr = date.toISOString().split('T')[0];
+      setTempDateValue(dateStr || '');
+    } else {
+      setTempDateValue('');
+    }
+  };
+
+  const handleDateInputBlur = (leadId: string) => {
+    if (tempDateValue) {
+      handleUpdateContactedDate(leadId, tempDateValue);
+    } else {
+      setEditingDateLeadId(null);
+    }
+  };
+
+  const handleDateInputKeyDown = (e: React.KeyboardEvent, leadId: string) => {
+    if (e.key === 'Enter') {
+      handleUpdateContactedDate(leadId, tempDateValue);
+    } else if (e.key === 'Escape') {
+      setEditingDateLeadId(null);
+      setTempDateValue('');
+    }
+  };
+
+  const handleBulkSetContactedDate = async () => {
+    if (selectedLeads.size === 0 || !bulkContactedDate) {
+      alert('Please select leads and choose a date');
+      return;
+    }
+
+    const confirmed = confirm(`Set contacted date for ${selectedLeads.size} lead(s)?`);
+    if (!confirmed) return;
+
+    setIsBulkUpdating(true);
+    try {
+      const updates = Array.from(selectedLeads).map(leadId =>
+        fetch(`/api/leads/${leadId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date_contacted: bulkContactedDate }),
+        })
+      );
+
+      await Promise.all(updates);
+      await fetchLeads(); // Refresh the list
+      setSelectedLeads(new Set());
+      setSelectAll(false);
+      setBulkContactedDate('');
+      alert(`Successfully updated ${selectedLeads.size} lead(s)!`);
+    } catch (error) {
+      console.error('Error bulk updating contacted dates:', error);
+      alert('Failed to update some leads. Please try again.');
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
   const getStatusColor = (status: LeadStatus) => {
     const colors: Record<LeadStatus, string> = {
       lead_collected: 'bg-slate-100 text-slate-800',
       email_1_sent: 'bg-blue-100 text-blue-800',
-      email_2_sent: 'bg-indigo-100 text-indigo-800',
-      email_3_sent: 'bg-purple-100 text-purple-800',
+      email_bounced: 'bg-red-100 text-red-800',
+      followup_1_sent: 'bg-indigo-100 text-indigo-800',
+      followup_2_sent: 'bg-purple-100 text-purple-800',
+      followup_3_sent: 'bg-fuchsia-100 text-fuchsia-800',
       replied_not_fit: 'bg-orange-100 text-orange-800',
       replied_interested: 'bg-cyan-100 text-cyan-800',
       call_booked: 'bg-teal-100 text-teal-800',
@@ -180,14 +287,44 @@ export function CRMTable() {
               : `${filteredLeads.length} ${hasActiveFilters ? 'filtered' : 'total'} leads`}
           </p>
         </div>
+        
+        {/* Search Field */}
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="Search name, email, company..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-4 py-2 w-80 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
         {selectedLeads.size > 0 && (
-          <button
-            onClick={handleDeleteSelected}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-          >
-            <X className="w-4 h-4" />
-            Delete ({selectedLeads.size})
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+              <Calendar className="w-4 h-4 text-slate-500" />
+              <input
+                type="date"
+                value={bulkContactedDate}
+                onChange={(e) => setBulkContactedDate(e.target.value)}
+                className="px-2 py-1 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Set contacted date"
+              />
+              <button
+                onClick={handleBulkSetContactedDate}
+                disabled={!bulkContactedDate || isBulkUpdating}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isBulkUpdating ? 'Updating...' : `Set Date (${selectedLeads.size})`}
+              </button>
+            </div>
+            <button
+              onClick={handleDeleteSelected}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+            >
+              <X className="w-4 h-4" />
+              Delete ({selectedLeads.size})
+            </button>
+          </div>
         )}
       </div>
 
@@ -282,6 +419,7 @@ export function CRMTable() {
                 </th>
                 <th className="px-6 py-4">Prospect</th>
                 <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Follow-up Timeline</th>
                 <th className="px-6 py-4">Automation</th>
                 <th className="px-6 py-4">Persona Score</th>
                 <th className="px-6 py-4">Created</th>
@@ -337,6 +475,16 @@ export function CRMTable() {
                         {formatStatusLabel(lead.status)}
                       </span>
                     </td>
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                      <FollowupTimeline
+                        dateContacted={lead.date_contacted}
+                        followup1SentAt={lead.followup_1_sent_at}
+                        followup2SentAt={lead.followup_2_sent_at}
+                        followup3SentAt={lead.followup_3_sent_at}
+                        status={lead.status}
+                        compact={true}
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       {(() => {
                         const stageInfo = getAutomationStageInfo(lead.automation_stage ?? 0);
@@ -380,13 +528,29 @@ export function CRMTable() {
                         }) : 'N/A'}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {lead.date_contacted ? new Date(lead.date_contacted).toLocaleDateString('en-US', { 
-                          month: 'short', day: 'numeric', year: 'numeric' 
-                        }) : '-'}
-                      </div>
+                    <td 
+                      className="px-6 py-4 cursor-pointer hover:bg-slate-100"
+                      onClick={(e) => handleDateCellClick(lead.id, lead.date_contacted, e)}
+                    >
+                      {editingDateLeadId === lead.id ? (
+                        <input
+                          type="date"
+                          value={tempDateValue}
+                          onChange={(e) => setTempDateValue(e.target.value)}
+                          onBlur={() => handleDateInputBlur(lead.id)}
+                          onKeyDown={(e) => handleDateInputKeyDown(e, lead.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          autoFocus
+                          className="px-2 py-1 text-xs border border-indigo-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {lead.date_contacted ? new Date(lead.date_contacted).toLocaleDateString('en-US', { 
+                            month: 'short', day: 'numeric', year: 'numeric' 
+                          }) : '-'}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5 text-xs text-slate-500">

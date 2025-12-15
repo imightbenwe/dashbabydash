@@ -3,6 +3,24 @@
     "subject": "Quick note after seeing your work",
     "body": "Hi {firstName},\n\n{emailOpening}\n\nQuick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\n\nI help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\n\nIf you want, I can take a quick look and tell you exactly where the bottleneck is.\n\nWould that be useful?\n\nCheers,\nKoen"
   },
+  "auto_followup_1": {
+    "subject": "RE: {originalSubject}",
+    "body": "Hi {firstName},\n\nJust wanted to quickly follow up in case my last message got buried.\n\nStill happy to take a quick look at your online flow and point out anything that might be quietly costing you clients or time.\n\nNo pressure at all, just let me know.\n\nCheers,\nKoen",
+    "daysAfter": 3,
+    "description": "Automatic follow-up 3 days after initial contact"
+  },
+  "auto_followup_2": {
+    "subject": "Quick check-in",
+    "body": "Hi {firstName},\n\nI know inboxes get busy, so I'll keep this short.\n\nIf optimizing your website or client flow isn't a priority right now, no worries at all.\nIf it is, I'm happy to share 1–2 concrete observations — no pitch attached.\n\nIf this isn't relevant, feel free to ignore this... I won't keep following up.\n\nBest,\nKoen",
+    "daysAfter": 5,
+    "description": "Follow-up #2 (5-7 days after follow-up #1, reduces friction)"
+  },
+  "auto_followup_3": {
+    "subject": "Closing the loop",
+    "body": "Hi {firstName},\n\nI'll close the loop after this.\n\nIf streamlining your online flow would be useful at some point, feel free to reply with \"later\" or \"curious\" and I'll take it from there.\n\nIf this isn't relevant, feel free to ignore this... I won't keep following up.\n\nWarm regards,\nKoen",
+    "daysAfter": 7,
+    "description": "Final follow-up (7-10 days after follow-up #2, polite close-out)"
+  },
   "follow_up_1": {
     "subject": "Made your site live",
     "body": "{firstName}, I know you've got a million things going on. Finding time for this is tough.\n\nTBH, I was thinking about you over the weekend and got a little carried away. I was so convinced your work could look incredible that I went ahead and made your site live.\n\nHere it is: {mockupUrl}\n\nLet me know what you think.\n\nKoen"

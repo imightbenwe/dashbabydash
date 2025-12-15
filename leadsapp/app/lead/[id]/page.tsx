@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Brain, ArrowLeft, Sparkles, Database, Mail, Save, Edit2, ExternalLink, Instagram, Facebook, Linkedin, FileText, MessageSquare, Globe, ChevronDown, ChevronUp } from 'lucide-react';
+import { Brain, ArrowLeft, Sparkles, Database, Mail, Save, Edit2, ExternalLink, Instagram, Facebook, Linkedin, FileText, MessageSquare, Globe, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { FollowupTimeline } from '@/components/gmail/FollowupTimeline';
 
 export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -255,13 +256,14 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
 
   const handleSendToGmail = async (email: any) => {
     try {
-      // Update lead status to "email_1_sent" and set date_contacted
+      // Update lead status to "email_1_sent", set date_contacted, and save subject for threading
       const response = await fetch(`/api/leads/${leadId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'email_1_sent',
           date_contacted: new Date().toISOString(),
+          initial_email_subject: email.subject, // Save for follow-up threading
         }),
       });
 
@@ -1043,9 +1045,11 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="lead_collected">Lead collected</option>
-                <option value="email_1_sent">Email 1 sent</option>
-                <option value="email_2_sent">Email 2 sent</option>
-                <option value="email_3_sent">Email 3 sent</option>
+                <option value="email_1_sent">Initial email sent</option>
+                <option value="email_bounced">Email bounced</option>
+                <option value="followup_1_sent">Follow-up #1 sent</option>
+                <option value="followup_2_sent">Follow-up #2 sent</option>
+                <option value="followup_3_sent">Follow-up #3 sent (final)</option>
                 <option value="replied_not_fit">Replied - not a fit</option>
                 <option value="replied_interested">Replied - interested</option>
                 <option value="call_booked">Call booked</option>
@@ -1054,6 +1058,44 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
                 <option value="lost">Lost</option>
                 <option value="site_live">Site Live</option>
               </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-400 uppercase block mb-1 flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Date Contacted
+              </label>
+              {isEditing ? (
+                <input
+                  type="date"
+                  value={lead.date_contacted ? new Date(lead.date_contacted).toISOString().split('T')[0] : ''}
+                  onChange={async (e) => {
+                    const newDate = e.target.value ? new Date(e.target.value).toISOString() : null;
+                    try {
+                      const response = await fetch(`/api/leads/${leadId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date_contacted: newDate }),
+                      });
+                      if (response.ok) {
+                        const data = await response.json();
+                        setLead(data.lead);
+                      }
+                    } catch (err) {
+                      console.error('Failed to update contacted date:', err);
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                />
+              ) : (
+                <p className="text-sm text-slate-900">
+                  {lead.date_contacted 
+                    ? new Date(lead.date_contacted).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      })
+                    : '—'}
+                </p>
+              )}
             </div>
             <div className="col-span-2">
               <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Next Action</label>
@@ -1232,6 +1274,18 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
             </div>
           </div>
         </div>
+
+        {/* Follow-up Timeline */}
+        {lead.date_contacted && (
+          <FollowupTimeline
+            dateContacted={lead.date_contacted}
+            followup1SentAt={lead.followup_1_sent_at}
+            followup2SentAt={lead.followup_2_sent_at}
+            followup3SentAt={lead.followup_3_sent_at}
+            status={lead.status}
+            compact={false}
+          />
+        )}
 
         {/* Instagram Engagement Analytics */}
         {(lead.total_posts_analyzed > 0 || lead.top_commenter_username) && (

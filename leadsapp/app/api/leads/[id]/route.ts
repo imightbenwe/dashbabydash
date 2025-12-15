@@ -12,7 +12,8 @@ export async function PATCH(
       status, persona_score, next_action, company, email, website, instagram, facebook, substack, threads, linkedin, name, 
       date_contacted, last_touch_date,
       mutual_connection_name, specific_hook_story, problem_statement, case_study_reference,
-      pdf_url, mockup_site_url, pdf_sent_date, site_live_date
+      pdf_url, mockup_site_url, pdf_sent_date, site_live_date,
+      initial_email_subject, followup_1_sent_at, followup_2_sent_at, followup_3_sent_at
     } = body;
 
     console.log(`🔄 Updating lead ${id}:`, { status, persona_score, next_action });
@@ -42,6 +43,12 @@ export async function PATCH(
     if (mockup_site_url !== undefined) updateData.mockup_site_url = mockup_site_url;
     if (pdf_sent_date !== undefined) updateData.pdf_sent_date = pdf_sent_date;
     if (site_live_date !== undefined) updateData.site_live_date = site_live_date;
+    
+    // Gmail follow-up tracking fields
+    if (initial_email_subject !== undefined) updateData.initial_email_subject = initial_email_subject;
+    if (followup_1_sent_at !== undefined) updateData.followup_1_sent_at = followup_1_sent_at;
+    if (followup_2_sent_at !== undefined) updateData.followup_2_sent_at = followup_2_sent_at;
+    if (followup_3_sent_at !== undefined) updateData.followup_3_sent_at = followup_3_sent_at;
 
     const { data: lead, error } = await supabaseAdmin
       .from('leads')

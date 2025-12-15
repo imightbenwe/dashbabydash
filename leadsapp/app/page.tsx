@@ -6,15 +6,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, Brain, Database, MapPin, Globe, FileText } from 'lucide-react';
+import { Users, Brain, Database, MapPin, Globe, FileText, TrendingUp } from 'lucide-react';
 import { NewAnalysisForm } from '@/components/forms/NewAnalysisForm';
 import { CRMTable } from '@/components/tables/CRMTable';
 import { GooglePlacesSearch } from '@/components/places/GooglePlacesSearch';
 import { DemoGenerator } from '@/components/demo/DemoGenerator';
 import { WebsiteScraper } from '@/components/scraper/WebsiteScraper';
+import { GmailFollowupQueue } from '@/components/gmail/GmailFollowupQueue';
+import { FollowupPipeline } from '@/components/gmail/FollowupPipeline';
 import { useAutomation } from '@/lib/hooks/useAutomation';
 
-type Tab = 'crm' | 'new-analysis' | 'google-places' | 'demo-generator' | 'website-scraper';
+type Tab = 'crm' | 'pipeline' | 'new-analysis' | 'google-places' | 'demo-generator' | 'website-scraper';
 
 export default function Home() {
   const [currentTab, setCurrentTab] = useState<Tab>('crm');
@@ -37,6 +39,7 @@ export default function Home() {
             <nav className="flex gap-2">
               {[
                 { id: 'crm', label: 'CRM', icon: Users },
+                { id: 'pipeline', label: 'Follow-up Pipeline', icon: TrendingUp },
                 { id: 'new-analysis', label: 'New Lead', icon: Brain },
                 { id: 'google-places', label: 'Google Places', icon: MapPin },
                 { id: 'demo-generator', label: 'Demos', icon: Globe },
@@ -63,15 +66,24 @@ export default function Home() {
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-6 py-8">
         {currentTab === 'crm' && (
-          <div>
-            <div className="mb-6">
+          <div className="space-y-6">
+            <div>
               <h1 className="text-3xl font-bold text-slate-900">Lead Management</h1>
               <p className="text-slate-600 mt-2">
                 View, filter, and manage all your leads in one place
               </p>
             </div>
+            
+            {/* Gmail Follow-up Queue */}
+            <GmailFollowupQueue />
+            
+            {/* CRM Table */}
             <CRMTable />
           </div>
+        )}
+
+        {currentTab === 'pipeline' && (
+          <FollowupPipeline />
         )}
 
         {currentTab === 'new-analysis' && (

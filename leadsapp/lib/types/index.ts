@@ -9,9 +9,11 @@
 
 export type LeadStatus = 
   | 'lead_collected' 
-  | 'email_1_sent' 
-  | 'email_2_sent' 
-  | 'email_3_sent' 
+  | 'email_1_sent'       // Initial email sent
+  | 'email_bounced'      // Email bounced / invalid
+  | 'followup_1_sent'    // First automated follow-up sent (3 days after initial)
+  | 'followup_2_sent'    // Second automated follow-up sent (5 days after FU1)
+  | 'followup_3_sent'    // Third/final automated follow-up sent (7 days after FU2)
   | 'replied_not_fit' 
   | 'replied_interested' 
   | 'call_booked' 
@@ -71,6 +73,12 @@ export interface Lead {
   site_live_date: string | null;
   pdf_url: string | null;
   mockup_site_url: string | null;
+  
+  // Gmail follow-up tracking
+  initial_email_subject: string | null;
+  followup_1_sent_at: string | null;
+  followup_2_sent_at: string | null;
+  followup_3_sent_at: string | null;
   
   // Automation tracking
   automation_stage: number; // 0=collected, 1=scraped, 2=analyzed, -1=error

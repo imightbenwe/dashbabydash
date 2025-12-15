@@ -43,14 +43,40 @@ export async function POST(request: NextRequest) {
 
     // Create a lead for each place
     for (const place of openLeads) {
+      // Check if domain is blacklisted
+      let isBlacklisted = false;
+      let blacklistReason = '';
+      
+      if (place.website) {
+        const websiteDomain = place.website
+          .toLowerCase()
+          .replace(/^https?:\/\//, '')
+          .replace(/^www\./, '')
+          .split('/')[0]
+          .trim();
+        
+        const { data: blacklistedDomain } = await supabaseAdmin
+          .from('blacklisted_domains')
+          .select('*')
+          .eq('domain', websiteDomain)
+          .single();
+        
+        if (blacklistedDomain) {
+          isBlacklisted = true;
+          blacklistReason = `Domain ${websiteDomain} is blacklisted: ${blacklistedDomain.reason}`;
+        }
+      }
+      
       // Create the actual lead in the leads table
       const { data: lead, error: leadError } = await supabaseAdmin
         .from('leads')
         .insert({
           company_name: place.place_name,
           website: place.website,
-          status: 'lead_collected',
-          automation_stage: 0, // Queued for automation
+          status: isBlacklisted ? 'lost' : 'lead_collected',
+          automation_stage: isBlacklisted ? -1 : 0, // -1 = blacklisted, 0 = Queued for automation
+          is_blacklisted: isBlacklisted,
+          blacklist_reason: isBlacklisted ? blacklistReason : null,
         })
         .select()
         .single();

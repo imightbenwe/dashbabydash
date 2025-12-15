@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, Brain, Database, MapPin, Globe, FileText, TrendingUp } from 'lucide-react';
+import { Users, Brain, Database, MapPin, Globe, FileText, TrendingUp, Shield } from 'lucide-react';
 import { NewAnalysisForm } from '@/components/forms/NewAnalysisForm';
 import { CRMTable } from '@/components/tables/CRMTable';
 import { GooglePlacesSearch } from '@/components/places/GooglePlacesSearch';
@@ -15,8 +15,9 @@ import { WebsiteScraper } from '@/components/scraper/WebsiteScraper';
 import { GmailFollowupQueue } from '@/components/gmail/GmailFollowupQueue';
 import { FollowupPipeline } from '@/components/gmail/FollowupPipeline';
 import { useAutomation } from '@/lib/hooks/useAutomation';
+import { BlacklistManager } from '@/components/BlacklistManager';
 
-type Tab = 'crm' | 'pipeline' | 'new-analysis' | 'google-places' | 'demo-generator' | 'website-scraper';
+type Tab = 'crm' | 'pipeline' | 'new-analysis' | 'google-places' | 'demo-generator' | 'website-scraper' | 'blacklist';
 
 export default function Home() {
   const [currentTab, setCurrentTab] = useState<Tab>('crm');
@@ -36,10 +37,11 @@ export default function Home() {
             </div>
             
             {/* Tab Navigation */}
-            <nav className="flex gap-2">
+            <nav className="flex gap-2 flex-wrap">
               {[
                 { id: 'crm', label: 'CRM', icon: Users },
                 { id: 'pipeline', label: 'Follow-up Pipeline', icon: TrendingUp },
+                { id: 'blacklist', label: 'Blacklist', icon: Shield },
                 { id: 'new-analysis', label: 'New Lead', icon: Brain },
                 { id: 'google-places', label: 'Google Places', icon: MapPin },
                 { id: 'demo-generator', label: 'Demos', icon: Globe },
@@ -120,6 +122,10 @@ export default function Home() {
               console.log('Website scraped, content length:', content.length);
             }}
           />
+        )}
+
+        {currentTab === 'blacklist' && (
+          <BlacklistManager />
         )}
       </main>
 

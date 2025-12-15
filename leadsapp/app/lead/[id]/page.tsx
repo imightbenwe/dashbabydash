@@ -46,6 +46,10 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const [rawDataSources, setRawDataSources] = useState<any[]>([]);
   const [isScrapingWebsite, setIsScrapingWebsite] = useState(false);
   
+  // Blacklist checking
+  const [blacklistInfo, setBlacklistInfo] = useState<any>(null);
+  const [isCheckingBlacklist, setIsCheckingBlacklist] = useState(false);
+  
   // Collapsible section states
   const [isDataSourcesExpanded, setIsDataSourcesExpanded] = useState(true);
   const [isAdditionalDataExpanded, setIsAdditionalDataExpanded] = useState(false);
@@ -94,9 +98,36 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
         setEditedCaseStudy(data.lead.case_study_reference || '');
         setEditedPdfUrl(data.lead.pdf_url || '');
         setEditedMockupSiteUrl(data.lead.mockup_site_url || '');
+        
+        // Check if domain is blacklisted
+        checkBlacklist(data.lead.email, data.lead.website);
       }
     } catch (err) {
       console.error('Failed to fetch lead:', err);
+    }
+  };
+
+  const checkBlacklist = async (email: string, website: string) => {
+    if (!email && !website) return;
+    
+    setIsCheckingBlacklist(true);
+    try {
+      const response = await fetch('/api/blacklist/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, website }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.isBlacklisted) {
+          setBlacklistInfo(data);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to check blacklist:', err);
+    } finally {
+      setIsCheckingBlacklist(false);
     }
   };
 
@@ -965,6 +996,41 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-xs font-semibold text-red-800 mb-1">Automation Error:</p>
                   <p className="text-xs text-red-700">{lead.automation_error}</p>
+                </div>
+              )}
+              
+              {/* Show blacklist warning if domain is blacklisted */}
+              {blacklistInfo?.isBlacklisted && (
+                <div className="mb-4 p-4 bg-red-50 border-2 border-red-500 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-red-900 mb-2">⚠️ BLACKLISTED DOMAIN DETECTED</p>
+                      <p className="text-sm text-red-800 mb-2">
+                        This lead contains a blacklisted domain. DO NOT contact this lead.
+                      </p>
+                      {blacklistInfo.blacklistedDomains.map((domain: any, idx: number) => (
+                        <div key={idx} className="mt-2 p-2 bg-red-100 rounded border border-red-300">
+                          <p className="text-xs font-semibold text-red-900">Domain: {domain.domain}</p>
+                          {domain.reason && (
+                            <p className="text-xs text-red-800 mt-1">Reason: {domain.reason}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Show blacklist info from lead record */}
+              {lead.is_blacklisted && lead.blacklist_reason && (
+                <div className="mb-4 p-4 bg-red-50 border-2 border-red-500 rounded-lg">
+                  <p className="text-sm font-bold text-red-900 mb-1">🚫 Blacklisted Lead</p>
+                  <p className="text-sm text-red-800">{lead.blacklist_reason}</p>
                 </div>
               )}
               

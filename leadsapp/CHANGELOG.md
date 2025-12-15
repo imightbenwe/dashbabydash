@@ -2,6 +2,28 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.3.5] - 2025-12-15
+
+### Added
+- **🛡️ Domain Blacklist System**: Protect against invalid/incorrect contact information
+  - New `blacklisted_domains` database table with migration script
+  - Blacklist management UI in new "Blacklist" tab
+  - Add/remove domains with reasons
+  - Automatic status update: All leads with blacklisted domains marked as "Lost"
+  - Real-time blacklist checking when creating/promoting leads
+  - Prominent warning banners on lead detail pages for blacklisted domains
+  - Supports both email domain and website domain matching
+  - Case-insensitive domain matching with normalization
+  - Initial blacklist entry: `salvajeretreat.com` (incorrect email used on multiple leads)
+  - Components: `components/BlacklistManager.tsx`
+  - API: `app/api/blacklist/route.ts`, `app/api/blacklist/check/route.ts`
+  - Migration: `DOMAIN_BLACKLIST_MIGRATION.sql`
+
+### Changed
+- **Lead Creation from Google Places**: Now checks blacklist before creating leads
+  - Blacklisted domains automatically marked as "Lost" with reason
+  - Automation disabled for blacklisted leads (stage -1)
+
 ## [2.3.4] - 2025-12-15
 
 ### Fixed

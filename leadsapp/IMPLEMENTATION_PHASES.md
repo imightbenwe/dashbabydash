@@ -1,11 +1,11 @@
 # Implementation Plan: Robust Email Scheduler & App Hardening
 
-> **Status**: Ready for Execution  
+> **Status**: ✅ COMPLETE  
 > **Goal**: Transition from fragile browser-based polling to a robust, secure, and automated server-side email system.
 
 ---
 
-## Phase 1: Foundation & Refactoring (The "Cleanup")
+## Phase 1: Foundation & Refactoring (The "Cleanup") ✅
 *Goal: Stop the bleeding. Fix security holes, remove fragile code, and prepare shared logic.*
 
 ### 1.1. Extract Shared Logic (Stop Self-Fetching)
@@ -23,7 +23,7 @@
 
 ---
 
-## Phase 2: Database Architecture (The "Brain")
+## Phase 2: Database Architecture (The "Brain") ✅
 *Goal: Make the database the single source of truth with atomic guarantees.*
 
 ### 2.1. Enhanced Queue Table Migration
@@ -39,11 +39,11 @@
 ### 2.3. Data Integrity Triggers
 - [x] Add trigger: When `leads.email` changes, update `email_send_queue.to_email`.
 
-**Migration file: `PHASE2_QUEUE_ENHANCEMENT.sql`** - Run in Supabase SQL Editor
+**Migration file: `PHASE2_QUEUE_ENHANCEMENT.sql`** - ✅ Executed
 
 ---
 
-## Phase 3: The Scheduler (The "Heartbeat")
+## Phase 3: The Scheduler (The "Heartbeat") ✅
 *Goal: Reliable, automated execution.*
 
 ### 3.1. Create Cron Endpoint
@@ -68,12 +68,14 @@
 
 ---
 
-## Phase 4: UI & Monitoring (The "Control Room")
+## Phase 4: UI & Monitoring (The "Control Room") ✅
 *Goal: Visibility and manual control.*
 
 ### 4.1. Waiting Room Enhancements
-- [ ] Add "Failed" tab to Waiting Room.
-- [ ] Add "Retry" (reset `next_retry_at`) and "Dismiss" (delete) actions.
+- [x] Add "Failed" tab to Waiting Room.
+- [x] Add "Retry" (reset status to approved, reschedule) and "Dismiss" (delete) actions.
+- [x] Added PATCH endpoint to `/api/gmail/approve-queue` for retry functionality.
+- [x] Updated `/api/gmail/process-queue` GET to return failed items.
 
 ### 4.2. Monitoring Dashboard (Optional/Later)
 - [ ] Simple stats view: Queue size, Sent today, Failed count.
@@ -82,9 +84,12 @@
 
 ## Execution Order
 
-1.  **Phase 1** (Refactoring) - *Safe to do immediately.*
-2.  **Phase 2** (Database) - *Safe to do immediately.*
-3.  **Phase 3** (Scheduler) - *Enables the new system.*
-4.  **Phase 4** (UI) - *Can be done in parallel or after.*
+1.  **Phase 1** (Refactoring) - ✅ Complete
+2.  **Phase 2** (Database) - ✅ Complete  
+3.  **Phase 3** (Scheduler) - ✅ Complete
+4.  **Phase 4** (UI) - ✅ Complete
 
-**Ready to begin Phase 1?**
+**Remaining Setup Tasks:**
+- Add `CRON_SECRET` to Vercel Environment Variables
+- Add `CRON_SECRET` and `LEADSAPP_URL` to GitHub Repository Secrets
+- Enable GitHub Actions workflow

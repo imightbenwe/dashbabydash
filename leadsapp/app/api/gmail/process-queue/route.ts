@@ -320,13 +320,24 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/gmail/process-queue
  * Returns the current approved queue status
+ * Query params:
+ * - status=failed: Also include failed items
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const includeStatus = url.searchParams.get('status');
+    
+    // Determine which statuses to fetch
+    const statuses = ['approved', 'sending'];
+    if (includeStatus === 'failed') {
+      statuses.push('failed');
+    }
+    
     const { data: queue, error } = await supabaseAdmin
       .from('email_send_queue')
       .select('*, leads(name, email, company)')
-      .in('status', ['approved', 'sending'])
+      .in('status', statuses)
       .order('scheduled_for', { ascending: true });
 
     if (error) {

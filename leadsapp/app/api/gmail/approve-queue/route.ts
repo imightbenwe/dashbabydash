@@ -142,6 +142,68 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * PATCH /api/gmail/approve-queue
+ * Retry failed emails - resets them to 'approved' status with new scheduled time
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { 
+      queueIds,
+      emailsPerHour = 10,
+      sendingSchedule = 'business',
+      sendingTimezone = 'America/New_York',
+    } = body;
+
+    if (!queueIds || queueIds.length === 0) {
+      return NextResponse.json({ error: 'No queue IDs provided' }, { status: 400 });
+    }
+
+    // Calculate new scheduled times
+    const retried = [];
+    for (let i = 0; i < queueIds.length; i++) {
+      const queueId = queueIds[i];
+      const scheduledFor = calculateScheduledTime(i, emailsPerHour, sendingSchedule, sendingTimezone);
+
+      // Reset failed email to approved status
+      const { data: updated, error } = await supabaseAdmin
+        .from('email_send_queue')
+        .update({
+          status: 'approved',
+          error_message: null,
+          retry_count: 0,
+          next_retry_at: null,
+          sending_started_at: null,
+          scheduled_for: scheduledFor.toISOString(),
+        })
+        .eq('id', queueId)
+        .eq('status', 'failed')  // Only retry failed emails
+        .select()
+        .single();
+
+      if (!error && updated) {
+        retried.push({
+          queueId,
+          scheduledFor: scheduledFor.toISOString(),
+        });
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      retried,
+      totalRetried: retried.length,
+    });
+
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to retry emails', details: String(error) },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * DELETE /api/gmail/approve-queue
  * Remove items from the approved queue (cancel pending sends)
  */

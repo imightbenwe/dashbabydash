@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Mail, User, Building, AlertTriangle, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mail, User, Building, AlertTriangle, Check, X, ChevronDown, ChevronUp, RefreshCw, Trash2, Clock, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import emailTemplates from '@/lib/email-templates.json';
 
@@ -20,6 +20,20 @@ interface AttentionItem extends PreviewItem {
   isFailed?: boolean;
 }
 
+interface FailedItem {
+  id: string;
+  lead_id: string;
+  leadName: string;
+  email: string;
+  company: string | null;
+  email_type: string;
+  subject: string;
+  error_message: string;
+  retry_count: number;
+  next_retry_at: string | null;
+  scheduled_for: string;
+}
+
 interface EmailPreview {
   to: string;
   subject: string;
@@ -29,14 +43,19 @@ interface EmailPreview {
   emailType: string;
 }
 
+type TabType = 'approved' | 'pending' | 'failed';
+
 export default function WaitingRoomPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [previewQueue, setPreviewQueue] = useState<PreviewItem[]>([]);
   const [requiresAttention, setRequiresAttention] = useState<AttentionItem[]>([]);
   const [approvedQueue, setApprovedQueue] = useState<any[]>([]);
+  const [failedQueue, setFailedQueue] = useState<FailedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [emailPreviews, setEmailPreviews] = useState<Map<string, EmailPreview>>(new Map());
   const [approving, setApproving] = useState<Set<string>>(new Set());
+  const [retrying, setRetrying] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState('');
 
   // Settings from localStorage
@@ -82,10 +101,37 @@ export default function WaitingRoomPage() {
     }
   };
 
+  // Fetch failed emails
+  const fetchFailedQueue = async () => {
+    try {
+      const response = await fetch('/api/gmail/process-queue?status=failed');
+      if (response.ok) {
+        const data = await response.json();
+        // Filter failed items from the queue response or use separate endpoint
+        const failed = (data.queue || []).filter((q: any) => q.status === 'failed');
+        setFailedQueue(failed.map((f: any) => ({
+          id: f.id,
+          lead_id: f.lead_id,
+          leadName: f.leads?.name || 'Unknown',
+          email: f.to_email,
+          company: f.leads?.company,
+          email_type: f.email_type,
+          subject: f.subject,
+          error_message: f.error_message || 'Unknown error',
+          retry_count: f.retry_count || 0,
+          next_retry_at: f.next_retry_at,
+          scheduled_for: f.scheduled_for,
+        })));
+      }
+    } catch (error) {
+      console.error('Error fetching failed:', error);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      await Promise.all([fetchPreviewQueue(), fetchApprovedQueue()]);
+      await Promise.all([fetchPreviewQueue(), fetchApprovedQueue(), fetchFailedQueue()]);
       setIsLoading(false);
     };
     loadData();
@@ -93,6 +139,7 @@ export default function WaitingRoomPage() {
     const interval = setInterval(() => {
       fetchPreviewQueue();
       fetchApprovedQueue();
+      fetchFailedQueue();
     }, 30000);
 
     return () => clearInterval(interval);
@@ -242,6 +289,71 @@ export default function WaitingRoomPage() {
       if (response.ok) {
         setMessage('✅ Dismissed failed email');
         fetchPreviewQueue();
+        fetchFailedQueue();
+      }
+    } catch (error) {
+      setMessage(`❌ Error: ${error}`);
+    }
+  };
+
+  // Retry a failed email
+  const handleRetryFailed = async (queueId: string) => {
+    setRetrying(new Set(retrying.add(queueId)));
+    
+    try {
+      const response = await fetch('/api/gmail/approve-queue', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          queueIds: [queueId],
+          emailsPerHour,
+          sendingSchedule,
+          sendingTimezone,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.totalRetried > 0) {
+        setMessage('✅ Email scheduled for retry');
+        fetchApprovedQueue();
+        fetchFailedQueue();
+      } else {
+        setMessage('⚠️ Could not retry email');
+      }
+    } catch (error) {
+      setMessage(`❌ Error: ${error}`);
+    } finally {
+      const newRetrying = new Set(retrying);
+      newRetrying.delete(queueId);
+      setRetrying(newRetrying);
+    }
+  };
+
+  // Retry all failed emails
+  const handleRetryAllFailed = async () => {
+    if (failedQueue.length === 0) return;
+    
+    const queueIds = failedQueue.map(f => f.id);
+    
+    try {
+      const response = await fetch('/api/gmail/approve-queue', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          queueIds,
+          emailsPerHour,
+          sendingSchedule,
+          sendingTimezone,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage(`✅ Retried ${result.totalRetried} email(s)`);
+        fetchApprovedQueue();
+        fetchFailedQueue();
       }
     } catch (error) {
       setMessage(`❌ Error: ${error}`);
@@ -277,7 +389,7 @@ export default function WaitingRoomPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8">
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -299,9 +411,52 @@ export default function WaitingRoomPage() {
         </div>
       )}
 
-      {/* Approved Queue (Ready to Send) */}
-      {approvedQueue.length > 0 && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl overflow-hidden">
+      {/* Tab Navigation */}
+      <div className="flex border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('approved')}
+          className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'approved'
+              ? 'border-emerald-500 text-emerald-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <Check className="w-4 h-4" />
+            Approved ({approvedQueue.length})
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'pending'
+              ? 'border-amber-500 text-amber-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Pending Review ({previewQueue.length})
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('failed')}
+          className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === 'failed'
+              ? 'border-red-500 text-red-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <XCircle className="w-4 h-4" />
+            Failed ({failedQueue.length})
+          </span>
+        </button>
+      </div>
+
+      {/* Approved Queue Tab */}
+      {activeTab === 'approved' && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <div className="bg-emerald-600 text-white px-6 py-4">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <Check className="w-5 h-5" />
@@ -309,57 +464,64 @@ export default function WaitingRoomPage() {
             </h2>
             <p className="text-emerald-100 text-sm">These emails will send at their scheduled times</p>
           </div>
-          <div className="divide-y divide-emerald-200">
-            {approvedQueue.map((item) => (
-              <div key={item.id} className="p-4 bg-white">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={`px-2 py-1 rounded text-xs font-medium ${getEmailTypeColor(item.email_type)}`}>
-                      {getEmailTypeName(item.email_type)}
-                    </div>
-                    <div>
-                      <div className="font-medium text-slate-900">{item.leads?.name}</div>
-                      <div className="text-sm text-slate-500">{item.to_email}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-slate-700">
-                        {new Date(item.scheduled_for).toLocaleString('en-US', {
-                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-                        })}
+          {approvedQueue.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">
+              <Mail className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+              <p>No emails scheduled for sending</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-emerald-100">
+              {approvedQueue.map((item) => (
+                <div key={item.id} className="p-4 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${getEmailTypeColor(item.email_type)}`}>
+                        {getEmailTypeName(item.email_type)}
                       </div>
-                      <div className="text-xs text-slate-500">Scheduled</div>
+                      <div>
+                        <div className="font-medium text-slate-900">{item.leads?.name}</div>
+                        <div className="text-sm text-slate-500">{item.to_email}</div>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => handleRemoveApproved(item.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded"
-                      title="Remove from queue"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-slate-700">
+                          {new Date(item.scheduled_for).toLocaleString('en-US', {
+                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                          })}
+                        </div>
+                        <div className="text-xs text-slate-500">Scheduled</div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveApproved(item.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded"
+                        title="Remove from queue"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 bg-slate-50 rounded-lg p-3 text-sm">
+                    <div className="text-slate-500 mb-1">Subject: <span className="text-slate-900 font-medium">{item.subject}</span></div>
+                    <div className="text-slate-700 whitespace-pre-wrap max-h-32 overflow-y-auto">{item.body}</div>
                   </div>
                 </div>
-                {/* Show email content */}
-                <div className="mt-3 bg-slate-50 rounded-lg p-3 text-sm">
-                  <div className="text-slate-500 mb-1">Subject: <span className="text-slate-900 font-medium">{item.subject}</span></div>
-                  <div className="text-slate-700 whitespace-pre-wrap">{item.body}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Pending Review Queue */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="bg-amber-500 text-white px-6 py-4">
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5" />
-            Pending Review ({previewQueue.length})
-          </h2>
-          <p className="text-amber-100 text-sm">Click to expand and see exact email content before approving</p>
-        </div>
+      {/* Pending Review Queue Tab */}
+      {activeTab === 'pending' && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-amber-500 text-white px-6 py-4">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Pending Review ({previewQueue.length})
+            </h2>
+            <p className="text-amber-100 text-sm">Click to expand and see exact email content before approving</p>
+          </div>
 
         {previewQueue.length === 0 ? (
           <div className="p-8 text-center text-slate-500">
@@ -487,50 +649,132 @@ export default function WaitingRoomPage() {
             })}
           </div>
         )}
-      </div>
 
-      {/* SKIPPED / MISFITS - Collapsed section at the bottom */}
-      {requiresAttention.length > 0 && (
-        <details className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
-          <summary className="bg-slate-200 text-slate-700 px-6 py-3 cursor-pointer hover:bg-slate-300 flex items-center justify-between">
-            <span className="font-medium">
-              Skipped ({requiresAttention.length}) — missing data, can't send
-            </span>
-          </summary>
-          <div className="divide-y divide-slate-200">
-            {requiresAttention.map((item) => {
-              const key = `skipped:${item.leadId}:${item.emailType}`;
-              return (
-                <div key={key} className="p-3 bg-white flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-3">
-                    <div className={`px-2 py-0.5 rounded text-xs font-medium border ${getEmailTypeColor(item.emailType)}`}>
-                      {getEmailTypeName(item.emailType)}
+        {/* Skipped items within pending tab */}
+        {requiresAttention.filter(a => !a.isFailed).length > 0 && (
+          <details className="border-t border-slate-200">
+            <summary className="bg-slate-100 text-slate-700 px-6 py-3 cursor-pointer hover:bg-slate-200 flex items-center justify-between">
+              <span className="font-medium text-sm">
+                ⚠️ Skipped ({requiresAttention.filter(a => !a.isFailed).length}) — missing data
+              </span>
+            </summary>
+            <div className="divide-y divide-slate-200">
+              {requiresAttention.filter(a => !a.isFailed).map((item) => {
+                const key = `skipped:${item.leadId}:${item.emailType}`;
+                return (
+                  <div key={key} className="p-3 bg-white flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-3">
+                      <div className={`px-2 py-0.5 rounded text-xs font-medium border ${getEmailTypeColor(item.emailType)}`}>
+                        {getEmailTypeName(item.emailType)}
+                      </div>
+                      <span className="font-medium text-slate-700">{item.leadName}</span>
                     </div>
-                    <span className="font-medium text-slate-700">{item.leadName}</span>
-                    {item.company && <span className="text-slate-400">• {item.company}</span>}
+                    <div className="flex items-center gap-3">
+                      <span className="text-slate-500 text-xs">{item.issues.join(', ')}</span>
+                      <Link href={`/lead/${item.leadId}`} className="text-xs text-blue-600 hover:underline">
+                        Fix →
+                      </Link>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-slate-500 text-xs">{item.issues.join(', ')}</span>
-                    <Link 
-                      href={`/lead/${item.leadId}`}
-                      className="text-xs text-blue-600 hover:underline"
-                    >
-                      View
-                    </Link>
-                    {item.isFailed && item.queueId && (
-                      <button
-                        onClick={() => handleDismissFailed(item.queueId!)}
-                        className="text-xs text-slate-500 hover:text-slate-700"
-                      >
-                        Dismiss
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          </details>
+        )}
+        </div>
+      )}
+
+      {/* Failed Queue Tab */}
+      {activeTab === 'failed' && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <XCircle className="w-5 h-5" />
+                Failed Emails ({failedQueue.length})
+              </h2>
+              <p className="text-red-100 text-sm">These emails failed to send. Retry or dismiss them.</p>
+            </div>
+            {failedQueue.length > 0 && (
+              <button
+                onClick={handleRetryAllFailed}
+                className="px-4 py-2 bg-white text-red-600 rounded-lg hover:bg-red-50 font-medium text-sm flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Retry All
+              </button>
+            )}
           </div>
-        </details>
+          {failedQueue.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">
+              <Check className="w-12 h-12 mx-auto mb-3 text-emerald-300" />
+              <p>No failed emails! 🎉</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-red-100">
+              {failedQueue.map((item) => (
+                <div key={item.id} className="p-4 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`px-2 py-1 rounded text-xs font-medium ${getEmailTypeColor(item.email_type)}`}>
+                        {getEmailTypeName(item.email_type)}
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-900">{item.leadName}</div>
+                        <div className="text-sm text-slate-500">{item.email}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-sm text-red-600 font-medium">
+                          {item.retry_count > 0 ? `${item.retry_count} retries` : 'First attempt'}
+                        </div>
+                        {item.next_retry_at && (
+                          <div className="text-xs text-slate-500">
+                            Auto-retry: {new Date(item.next_retry_at).toLocaleTimeString()}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleRetryFailed(item.id)}
+                        disabled={retrying.has(item.id)}
+                        className="p-2 text-emerald-600 hover:bg-emerald-50 rounded disabled:opacity-50"
+                        title="Retry now"
+                      >
+                        {retrying.has(item.id) ? (
+                          <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleDismissFailed(item.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded"
+                        title="Dismiss (won't retry)"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  {/* Error message */}
+                  <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
+                    <div className="text-red-700 font-medium mb-1">Error:</div>
+                    <div className="text-red-600">{item.error_message}</div>
+                  </div>
+                  {/* Email preview */}
+                  <details className="mt-2">
+                    <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">
+                      View email content
+                    </summary>
+                    <div className="mt-2 bg-slate-50 rounded-lg p-3 text-sm">
+                      <div className="text-slate-500 mb-1">Subject: <span className="text-slate-900 font-medium">{item.subject}</span></div>
+                    </div>
+                  </details>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

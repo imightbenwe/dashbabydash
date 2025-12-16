@@ -1,193 +1,131 @@
 # Email Scheduler Setup Guide
 
-This guide walks you through setting up the automated email scheduler system.
+Complete guide for the automated email sending system.
 
-## Prerequisites
+## Overview
 
-1. Supabase database with the email queue tables
-2. Vercel-deployed Next.js app
-3. Gmail OAuth connected
+- **GitHub Actions cron** runs every 20 minutes (free tier: ~2,160 min/month)
+- **Server-side endpoint** sends approved emails via Gmail API
+- **Business hours** enforcement (9 AM - 6 PM Eastern, weekdays)
+- **Automatic retries** for failed emails (max 3 attempts)
+- **Watchdog** recovers stuck emails
 
-## Step 1: Run Database Migrations
+---
 
-Run these migrations in order in your Supabase SQL Editor:
+## Quick Setup Checklist
 
-1. **EMAIL_QUEUE_MIGRATION.sql** - Creates the base email queue table
-2. **PHASE2_QUEUE_ENHANCEMENT.sql** - Adds retry logic, audit trails, and watchdog functions
+- [ ] Run `supabase-schema.sql` in Supabase SQL Editor
+- [ ] Generate `CRON_SECRET` and add to Vercel env vars
+- [ ] Add `LEADSAPP_URL` and `CRON_SECRET` to GitHub Secrets
+- [ ] Add production redirect URI to Google Cloud Console
+- [ ] Connect Gmail in the app
 
-## Step 2: Generate CRON_SECRET
+---
 
-Generate a secure random secret:
+## Step 1: Generate CRON_SECRET
 
 ```bash
-# Using Node.js
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-
-# Or using openssl
-openssl rand -hex 32
 ```
 
-Example output: `a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456`
+---
 
-## Step 3: Add Environment Variables to Vercel
+## Step 2: Vercel Environment Variables
 
-1. Go to your Vercel project dashboard
-2. Navigate to **Settings** → **Environment Variables**
-3. Add the following variable:
-
-| Name | Value | Environments |
-|------|-------|--------------|
-| `CRON_SECRET` | (your generated secret) | Production, Preview |
-
-4. Click **Save**
-5. **Redeploy** your app for the changes to take effect
-
-## Step 4: Add GitHub Repository Secrets
-
-1. Go to your GitHub repository
-2. Navigate to **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Add these secrets:
+Go to Vercel → `dash-leadsapp` → **Settings** → **Environment Variables**
 
 | Name | Value |
 |------|-------|
-| `APP_URL` | Your Vercel app URL (e.g., `https://your-app.vercel.app`) |
-| `CRON_SECRET` | Same secret you added to Vercel |
+| `CRON_SECRET` | (your generated secret) |
 
-## Step 5: Enable GitHub Actions
+Redeploy after adding.
 
-The workflow file is at `.github/workflows/email-scheduler.yml`.
+---
 
-1. Push the workflow file to your repository
-2. Go to **Actions** tab in your GitHub repo
-3. You should see "Email Scheduler" workflow
-4. It will automatically run every 5 minutes
+## Step 3: GitHub Repository Secrets
 
-## Step 6: Test the Setup
+Go to GitHub repo → **Settings** → **Secrets and variables** → **Actions**
 
-### Manual Test via GitHub Actions
+| Name | Value |
+|------|-------|
+| `LEADSAPP_URL` | `https://dash-leadsapp.vercel.app` |
+| `CRON_SECRET` | (same secret from Step 1) |
 
-1. Go to **Actions** → **Email Scheduler**
+---
+
+## Step 4: Google Cloud Console
+
+Add this redirect URI to your OAuth 2.0 Client:
+
+```
+https://dash-leadsapp.vercel.app/api/gmail/callback
+```
+
+---
+
+## Step 5: Connect Gmail
+
+1. Go to https://dash-leadsapp.vercel.app
+2. Navigate to Gmail Settings
+3. Click "Connect Gmail"
+4. Authorize with Google
+
+---
+
+## Testing
+
+### Manual Trigger
+1. GitHub → **Actions** → **Email Scheduler**
 2. Click **Run workflow**
-3. Choose your branch and optionally adjust batch size
-4. Click **Run workflow**
-5. Watch the run and check the logs
+3. Check summary for results
 
-### Manual Test via cURL
-
-```bash
-curl -X POST \
-  -H "Authorization: Bearer YOUR_CRON_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"batchSize": 1}' \
-  https://your-app.vercel.app/api/cron/send-emails
+### Expected (no emails queued)
+```
+Claimed: 0
+Sent: 0
+Skipped: No emails due to send
 ```
 
-### Health Check
+---
 
-```bash
-curl -H "Authorization: Bearer YOUR_CRON_SECRET" \
-  https://your-app.vercel.app/api/cron/send-emails
+## How It Works
+
+```
+GitHub Actions (every 20 min)
+         │
+         ▼
+/api/cron/send-emails
+         │
+         ├─ Verify CRON_SECRET
+         ├─ Check business hours (skip if outside 9-6 ET)
+         ├─ Run watchdog (recover stuck emails)
+         ├─ Claim batch atomically
+         ├─ Send via Gmail API
+         └─ Update database
+         │
+         ▼
+    Supabase DB
 ```
 
-## Configuration Options
-
-The scheduler accepts these configuration options in the POST body:
-
-```json
-{
-  "batchSize": 5,                    // Emails per run (default: 5)
-  "sendingTimezone": "America/New_York",  // Timezone for business hours
-  "businessHoursStart": 9,           // Start hour (24h format)
-  "businessHoursEnd": 18,            // End hour (24h format)
-  "enableWeekends": false,           // Send on weekends?
-  "stuckThresholdMinutes": 10        // Timeout for stuck emails
-}
-```
-
-## Monitoring
-
-### View Queue Status
-
-The GET endpoint returns current queue stats:
-
-```bash
-curl -H "Authorization: Bearer YOUR_CRON_SECRET" \
-  https://your-app.vercel.app/api/cron/send-emails
-```
-
-Response:
-```json
-{
-  "status": "healthy",
-  "queue": {
-    "approved": 3,
-    "sending": 0,
-    "failed": 1
-  },
-  "sentToday": 15,
-  "timestamp": "2024-12-16T14:30:00.000Z"
-}
-```
-
-### View in Supabase
-
-Query the `email_queue_status` view for a complete picture:
-
-```sql
-SELECT * FROM email_queue_status;
-```
-
-### View Audit Trail
-
-```sql
-SELECT * FROM email_send_attempts 
-ORDER BY created_at DESC 
-LIMIT 50;
-```
+---
 
 ## Troubleshooting
 
-### Emails Not Sending
+| Issue | Solution |
+|-------|----------|
+| 401 Unauthorized | `CRON_SECRET` must match exactly in Vercel and GitHub |
+| Emails not sending | Check business hours, Gmail connection, Approved queue |
+| Gmail auth error | Re-connect Gmail, verify redirect URI in Google Console |
 
-1. **Check business hours**: Scheduler only runs 9 AM - 6 PM Eastern by default
-2. **Check queue**: Are there approved emails in `email_send_queue`?
-3. **Check Gmail auth**: Is `user_gmail_auth` table populated?
+---
 
-### 401 Unauthorized
+## Monitoring
 
-- Verify `CRON_SECRET` matches in both Vercel and GitHub
-- Check the secret doesn't have trailing whitespace
+### In App
+- **Waiting Room** → **Approved**: Queued emails
+- **Waiting Room** → **Failed**: Failed with errors
 
-### Stuck Emails
-
-The watchdog automatically recovers emails stuck in "sending" state for >10 minutes.
-Check `email_send_attempts` for error details.
-
-### Rate Limiting
-
-Gmail has sending limits. If you hit them, emails will fail with rate limit errors.
-The system will automatically retry these with exponential backoff (5, 10, 15 minutes).
-
-## Architecture Overview
-
-```
-┌─────────────────────┐     ┌─────────────────────────────┐
-│   GitHub Actions    │────▶│  /api/cron/send-emails      │
-│   (every 5 min)     │     │                             │
-└─────────────────────┘     │  1. Verify CRON_SECRET      │
-                            │  2. Check business hours    │
-                            │  3. Run watchdog            │
-                            │  4. Claim batch (atomic)    │
-                            │  5. Send via Gmail API      │
-                            │  6. Update DB status        │
-                            └─────────────────────────────┘
-                                          │
-                                          ▼
-                            ┌─────────────────────────────┐
-                            │        Supabase             │
-                            │  • email_send_queue         │
-                            │  • email_send_attempts      │
-                            │  • leads                    │
-                            └─────────────────────────────┘
+### In Supabase
+```sql
+SELECT status, COUNT(*) FROM email_send_queue GROUP BY status;
 ```

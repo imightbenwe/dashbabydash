@@ -2,6 +2,27 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.8.0] - 2025-12-16
+
+### 🔐 Production Deployment & Security
+
+Deployed leadsapp to separate Vercel project with proper authentication.
+
+### Added
+- **Supabase Auth**: Login-only authentication (no public signup)
+- **PasswordGate component**: Protects entire app, requires Supabase user
+- **Separate Vercel project**: `dash-leadsapp.vercel.app` for the app, main site untouched
+
+### Changed
+- **Cron schedule**: Changed from every 5 minutes to every 20 minutes (stays within GitHub Actions free tier ~2,160 min/month)
+
+### Configuration Required
+- Create admin user in Supabase Dashboard → Authentication → Users → Add user (with Auto Confirm)
+- Add `https://dash-leadsapp.vercel.app/api/gmail/callback` to Google Cloud Console OAuth redirect URIs
+- Update GitHub Secret `LEADSAPP_URL` to `https://dash-leadsapp.vercel.app`
+
+---
+
 ## [2.7.1] - 2025-12-16
 
 ### 🔧 TypeScript Strict Mode Build Fixes

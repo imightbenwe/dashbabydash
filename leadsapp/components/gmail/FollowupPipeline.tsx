@@ -715,12 +715,10 @@ export function FollowupPipeline() {
                 </div>
               </div>
               <div className="flex gap-6">
-                {readyCount > 0 && (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-yellow-300">{readyCount}</div>
-                    <div className="text-sm text-green-100">ready NOW</div>
-                  </div>
-                )}
+                <div className="text-center">
+                  <div className={`text-2xl font-bold ${readyCount > 0 ? 'text-yellow-300' : 'text-white'}`}>{readyCount}</div>
+                  <div className="text-sm text-green-100">ready NOW</div>
+                </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">{dbQueue.length}</div>
                   <div className="text-sm text-green-100">total queued</div>

@@ -260,6 +260,34 @@ export async function GET() {
   }
 }
 
+/**
+ * DELETE /api/gmail/auto-queue
+ * Clear all approved emails from queue (for rescheduling)
+ */
+export async function DELETE() {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('email_send_queue')
+      .delete()
+      .eq('status', 'approved');
+
+    if (error) {
+      return NextResponse.json({ error: 'Failed to clear queue' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Queue cleared',
+    });
+
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to clear queue', details: String(error) },
+      { status: 500 }
+    );
+  }
+}
+
 // Helper: Validate that this email type is appropriate for this lead
 function validateEmailForLead(lead: any, emailType: string): string | null {
   if (emailType === 'initial') {

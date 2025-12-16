@@ -397,6 +397,54 @@ export function FollowupPipeline() {
     }
   };
 
+  // Reschedule all queued emails with current settings
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const rescheduleQueue = async () => {
+    if (!confirm('This will clear the current queue and re-schedule all emails with your current rate settings. Continue?')) {
+      return;
+    }
+    
+    setIsRescheduling(true);
+    try {
+      // First, delete all approved emails from queue
+      const deleteResponse = await fetch('/api/gmail/auto-queue', {
+        method: 'DELETE',
+      });
+      
+      if (!deleteResponse.ok) {
+        alert('Failed to clear queue');
+        return;
+      }
+      
+      // Then re-queue with current settings
+      const currentEmailsPerHour = parseInt(localStorage.getItem('gmail_emails_per_hour') || '10', 10);
+      const currentSchedule = localStorage.getItem('gmail_sending_schedule') || 'business';
+      const currentTimezone = localStorage.getItem('gmail_sending_timezone') || 'America/New_York';
+      
+      const response = await fetch('/api/gmail/auto-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          delayMinutes: 0,
+          emailsPerHour: currentEmailsPerHour,
+          sendingSchedule: currentSchedule,
+          sendingTimezone: currentTimezone,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Re-scheduled ${data.results?.queued?.length || 0} emails with ${currentEmailsPerHour} emails/hour`);
+        await fetchDbQueue();
+      }
+    } catch (error) {
+      console.error('Reschedule error:', error);
+      alert('Failed to reschedule');
+    } finally {
+      setIsRescheduling(false);
+    }
+  };
+
   useEffect(() => {
     fetchPipeline();
     autoQueueEmails(); // Auto-queue on load
@@ -714,7 +762,14 @@ export function FollowupPipeline() {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-6">
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={rescheduleQueue}
+                  disabled={isRescheduling}
+                  className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {isRescheduling ? '⏳ Rescheduling...' : '🔄 Reschedule All'}
+                </button>
                 <div className="text-center">
                   <div className={`text-2xl font-bold ${readyCount > 0 ? 'text-yellow-300' : 'text-white'}`}>{readyCount}</div>
                   <div className="text-sm text-green-100">ready NOW</div>

@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
           let extractedEmail = null;
           const emailsFoundMatch = scrapedContent.match(/EMAILS FOUND:\s*([^\n]+)/);
           if (emailsFoundMatch && emailsFoundMatch[1]) {
-            const foundEmails = emailsFoundMatch[1].split(',').map(e => e.trim());
+            const foundEmails = emailsFoundMatch[1].split(',').map((e: string) => e.trim());
             extractedEmail = foundEmails[0];
           } else if (validEmails && validEmails.length > 0) {
             extractedEmail = validEmails[0];

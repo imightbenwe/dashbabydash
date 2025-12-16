@@ -7,7 +7,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Mail, Clock, Send, CheckCircle, ArrowRight, Zap, Play, Calendar, User } from 'lucide-react';
+import { Mail, Clock, Send, CheckCircle, ArrowRight, Zap, Play, Calendar, User, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import emailTemplates from '@/lib/email-templates.json';
 
@@ -50,6 +50,7 @@ export function FollowupPipeline() {
   // Email queue state
   const [emailQueue, setEmailQueue] = useState<QueueItem[]>([]);
   const [newLeads, setNewLeads] = useState<Lead[]>([]); // Leads not yet contacted
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set()); // Track expanded queue items
   
   // Load settings from localStorage
   const [emailsPerHour, setEmailsPerHour] = useState(10);
@@ -115,6 +116,57 @@ export function FollowupPipeline() {
     }
     
     return currentTime;
+  };
+
+  // Toggle expanded state for a queue item
+  const toggleExpanded = (itemId: string) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  };
+
+  // Get email preview for a queue item
+  const getEmailPreview = (item: QueueItem) => {
+    const templates = emailTemplates as any;
+    let template;
+    
+    switch (item.queueType) {
+      case 'initial':
+        template = templates.initial;
+        break;
+      case 'followup_1':
+        template = templates.auto_followup_1;
+        break;
+      case 'followup_2':
+        template = templates.auto_followup_2;
+        break;
+      case 'followup_3':
+        template = templates.auto_followup_3;
+        break;
+      default:
+        template = templates.initial;
+    }
+    
+    const firstName = item.lead.name.split(' ')[0];
+    let subject = template.subject || 'No subject';
+    let body = template.body || '';
+    
+    // Replace placeholders
+    body = body.replace(/{firstName}/g, firstName);
+    subject = subject.replace(/{firstName}/g, firstName);
+    
+    // For RE: subjects, add the original subject
+    if (subject === 'RE:' && item.lead.initial_email_subject) {
+      subject = `RE: ${item.lead.initial_email_subject}`;
+    }
+    
+    return { subject, body };
   };
 
   const fetchPipeline = async () => {
@@ -588,7 +640,7 @@ export function FollowupPipeline() {
         </div>
       </div>
       
-      {/* Email Queue Section - Waiting Room Preview */}
+      {/* Email Queue Section - Direct View */}
       {emailQueue.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4 text-white">
@@ -596,32 +648,15 @@ export function FollowupPipeline() {
               <div className="flex items-center gap-3">
                 <Zap className="w-6 h-6" />
                 <div>
-                  <h3 className="font-bold text-lg">Emails Pending Review</h3>
+                  <h3 className="font-bold text-lg">Emails Ready to Send</h3>
                   <p className="text-amber-100 text-sm">
-                    {emailQueue.length} emails ready - review in Waiting Room before sending
+                    {emailQueue.length} emails scheduled - cron sends automatically
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                {/* Queued Count (in countdown) */}
-                {approvedQueue.length > 0 && (
-                  <div className="text-right bg-orange-600/50 px-3 py-2 rounded-lg border border-orange-400/50">
-                    <div className="text-lg font-bold">{approvedQueue.length}</div>
-                    <div className="text-xs text-orange-200">⏱️ In Countdown</div>
-                  </div>
-                )}
-                {/* Go to Waiting Room Button */}
-                <a
-                  href="/pipeline/waiting-room"
-                  className="px-4 py-2 bg-white text-amber-700 rounded-lg font-semibold hover:bg-amber-50 flex items-center gap-2"
-                >
-                  <Clock className="w-4 h-4" />
-                  Open Waiting Room
-                </a>
-                <div className="text-right">
-                  <div className="text-2xl font-bold">{emailQueue.length}</div>
-                  <div className="text-sm text-amber-100">pending</div>
-                </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold">{emailQueue.length}</div>
+                <div className="text-sm text-amber-100">in queue</div>
               </div>
             </div>
           </div>
@@ -635,24 +670,43 @@ export function FollowupPipeline() {
                   <h4 className="font-semibold text-slate-800">Initial Email</h4>
                   <span className="text-sm text-slate-500">({initialQueue.length} leads)</span>
                 </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {initialQueue.map((item, idx) => (
-                    <div key={item.lead.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-slate-400 w-6">#{idx + 1}</span>
-                        <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">
-                          {item.lead.name}
-                        </Link>
-                        <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {initialQueue.map((item, idx) => {
+                    const itemId = `initial-${item.lead.id}`;
+                    const isExpanded = expandedItems.has(itemId);
+                    const preview = isExpanded ? getEmailPreview(item) : null;
+                    return (
+                      <div key={item.lead.id} className="bg-slate-50 rounded-lg overflow-hidden">
+                        <div 
+                          className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-100"
+                          onClick={() => toggleExpanded(itemId)}
+                        >
+                          <div className="flex items-center gap-3">
+                            {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                            <span className="text-xs font-medium text-slate-400 w-6">#{idx + 1}</span>
+                            <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                              {item.lead.name}
+                            </Link>
+                            <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-slate-500">
+                            <Calendar className="w-3 h-3" />
+                            Est. {item.estimatedSendTime.toLocaleString('en-US', { 
+                              month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                            })}
+                          </div>
+                        </div>
+                        {isExpanded && preview && (
+                          <div className="px-4 py-3 bg-white border-t border-slate-100">
+                            <div className="text-xs text-slate-500 mb-1">Subject:</div>
+                            <div className="text-sm font-medium text-slate-800 mb-2">{preview.subject}</div>
+                            <div className="text-xs text-slate-500 mb-1">Body:</div>
+                            <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 rounded p-2 max-h-32 overflow-y-auto">{preview.body}</div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
-                        <Calendar className="w-3 h-3" />
-                        Est. {item.estimatedSendTime.toLocaleString('en-US', { 
-                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -665,24 +719,43 @@ export function FollowupPipeline() {
                   <h4 className="font-semibold text-slate-800">Follow-up #1</h4>
                   <span className="text-sm text-slate-500">({fu1Queue.length} leads)</span>
                 </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {fu1Queue.map((item, idx) => (
-                    <div key={item.lead.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-slate-400 w-6">#{initialQueue.length + idx + 1}</span>
-                        <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">
-                          {item.lead.name}
-                        </Link>
-                        <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {fu1Queue.map((item, idx) => {
+                    const itemId = `fu1-${item.lead.id}`;
+                    const isExpanded = expandedItems.has(itemId);
+                    const preview = isExpanded ? getEmailPreview(item) : null;
+                    return (
+                      <div key={item.lead.id} className="bg-slate-50 rounded-lg overflow-hidden">
+                        <div 
+                          className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-100"
+                          onClick={() => toggleExpanded(itemId)}
+                        >
+                          <div className="flex items-center gap-3">
+                            {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                            <span className="text-xs font-medium text-slate-400 w-6">#{initialQueue.length + idx + 1}</span>
+                            <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                              {item.lead.name}
+                            </Link>
+                            <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-slate-500">
+                            <Calendar className="w-3 h-3" />
+                            Est. {item.estimatedSendTime.toLocaleString('en-US', { 
+                              month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                            })}
+                          </div>
+                        </div>
+                        {isExpanded && preview && (
+                          <div className="px-4 py-3 bg-white border-t border-slate-100">
+                            <div className="text-xs text-slate-500 mb-1">Subject:</div>
+                            <div className="text-sm font-medium text-slate-800 mb-2">{preview.subject}</div>
+                            <div className="text-xs text-slate-500 mb-1">Body:</div>
+                            <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 rounded p-2 max-h-32 overflow-y-auto">{preview.body}</div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
-                        <Calendar className="w-3 h-3" />
-                        Est. {item.estimatedSendTime.toLocaleString('en-US', { 
-                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -695,24 +768,43 @@ export function FollowupPipeline() {
                   <h4 className="font-semibold text-slate-800">Follow-up #2</h4>
                   <span className="text-sm text-slate-500">({fu2Queue.length} leads)</span>
                 </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {fu2Queue.map((item, idx) => (
-                    <div key={item.lead.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-slate-400 w-6">#{initialQueue.length + fu1Queue.length + idx + 1}</span>
-                        <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">
-                          {item.lead.name}
-                        </Link>
-                        <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {fu2Queue.map((item, idx) => {
+                    const itemId = `fu2-${item.lead.id}`;
+                    const isExpanded = expandedItems.has(itemId);
+                    const preview = isExpanded ? getEmailPreview(item) : null;
+                    return (
+                      <div key={item.lead.id} className="bg-slate-50 rounded-lg overflow-hidden">
+                        <div 
+                          className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-100"
+                          onClick={() => toggleExpanded(itemId)}
+                        >
+                          <div className="flex items-center gap-3">
+                            {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                            <span className="text-xs font-medium text-slate-400 w-6">#{initialQueue.length + fu1Queue.length + idx + 1}</span>
+                            <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                              {item.lead.name}
+                            </Link>
+                            <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-slate-500">
+                            <Calendar className="w-3 h-3" />
+                            Est. {item.estimatedSendTime.toLocaleString('en-US', { 
+                              month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                            })}
+                          </div>
+                        </div>
+                        {isExpanded && preview && (
+                          <div className="px-4 py-3 bg-white border-t border-slate-100">
+                            <div className="text-xs text-slate-500 mb-1">Subject:</div>
+                            <div className="text-sm font-medium text-slate-800 mb-2">{preview.subject}</div>
+                            <div className="text-xs text-slate-500 mb-1">Body:</div>
+                            <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 rounded p-2 max-h-32 overflow-y-auto">{preview.body}</div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
-                        <Calendar className="w-3 h-3" />
-                        Est. {item.estimatedSendTime.toLocaleString('en-US', { 
-                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -725,24 +817,43 @@ export function FollowupPipeline() {
                   <h4 className="font-semibold text-slate-800">Follow-up #3</h4>
                   <span className="text-sm text-slate-500">({fu3Queue.length} leads)</span>
                 </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {fu3Queue.map((item, idx) => (
-                    <div key={item.lead.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-slate-400 w-6">#{initialQueue.length + fu1Queue.length + fu2Queue.length + idx + 1}</span>
-                        <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">
-                          {item.lead.name}
-                        </Link>
-                        <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {fu3Queue.map((item, idx) => {
+                    const itemId = `fu3-${item.lead.id}`;
+                    const isExpanded = expandedItems.has(itemId);
+                    const preview = isExpanded ? getEmailPreview(item) : null;
+                    return (
+                      <div key={item.lead.id} className="bg-slate-50 rounded-lg overflow-hidden">
+                        <div 
+                          className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-100"
+                          onClick={() => toggleExpanded(itemId)}
+                        >
+                          <div className="flex items-center gap-3">
+                            {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                            <span className="text-xs font-medium text-slate-400 w-6">#{initialQueue.length + fu1Queue.length + fu2Queue.length + idx + 1}</span>
+                            <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                              {item.lead.name}
+                            </Link>
+                            <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-slate-500">
+                            <Calendar className="w-3 h-3" />
+                            Est. {item.estimatedSendTime.toLocaleString('en-US', { 
+                              month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                            })}
+                          </div>
+                        </div>
+                        {isExpanded && preview && (
+                          <div className="px-4 py-3 bg-white border-t border-slate-100">
+                            <div className="text-xs text-slate-500 mb-1">Subject:</div>
+                            <div className="text-sm font-medium text-slate-800 mb-2">{preview.subject}</div>
+                            <div className="text-xs text-slate-500 mb-1">Body:</div>
+                            <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 rounded p-2 max-h-32 overflow-y-auto">{preview.body}</div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
-                        <Calendar className="w-3 h-3" />
-                        Est. {item.estimatedSendTime.toLocaleString('en-US', { 
-                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

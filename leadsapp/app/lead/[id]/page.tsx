@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Brain, ArrowLeft, Sparkles, Database, Mail, Save, Edit2, ExternalLink, Instagram, Facebook, Linkedin, FileText, MessageSquare, Globe, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { FollowupTimeline } from '@/components/gmail/FollowupTimeline';
@@ -8,8 +8,12 @@ import { LeadActivityLog } from '@/components/gmail/LeadActivityLog';
 
 export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const [leadId, setLeadId] = useState<string>('');
+  // Use React's `use()` to unwrap the params Promise properly
+  const { id: leadId } = use(params);
+  
   const [lead, setLead] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [leadAnalysis, setLeadAnalysis] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -64,47 +68,56 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   const [isGeneratingMockup, setIsGeneratingMockup] = useState(false);
   const [mockupResult, setMockupResult] = useState<any>(null);
 
+  // Fetch lead data when component mounts
   useEffect(() => {
-    params.then(p => {
-      setLeadId(p.id);
-      fetchLeadData(p.id);
-      fetchLeadAnalysis(p.id);
-    });
-  }, []);
+    if (leadId) {
+      setIsLoading(true);
+      setLoadError(null);
+      
+      Promise.all([
+        fetchLeadData(leadId),
+        fetchLeadAnalysis(leadId)
+      ]).finally(() => {
+        setIsLoading(false);
+      });
+    }
+  }, [leadId]);
 
   const fetchLeadData = async (id: string) => {
     try {
       const response = await fetch(`/api/leads/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setLead(data.lead);
-        setGeneratedEmails(data.emails || []);
-        setEditedName(data.lead.name || '');
-        setEditedCompany(data.lead.company || '');
-        setEditedEmail(data.lead.email || '');
-        setEditedWebsite(data.lead.website || '');
-        setEditedInstagram(data.lead.instagram || '');
-        setEditedFacebook(data.lead.facebook || '');
-        setEditedSubstack(data.lead.substack || '');
-        setEditedThreads(data.lead.threads || '');
-        setEditedLinkedIn(data.lead.linkedin || '');
-        setEditedStatus(data.lead.status || 'new');
-        setEditedNextAction(data.lead.next_action || '');
-        setProfilePictureUrl(data.lead.profile_picture || '');
-        
-        // Set personalization fields
-        setEditedMutualConnection(data.lead.mutual_connection_name || '');
-        setEditedHookStory(data.lead.specific_hook_story || '');
-        setEditedProblemStatement(data.lead.problem_statement || '');
-        setEditedCaseStudy(data.lead.case_study_reference || '');
-        setEditedPdfUrl(data.lead.pdf_url || '');
-        setEditedMockupSiteUrl(data.lead.mockup_site_url || '');
-        
-        // Check if domain is blacklisted
-        checkBlacklist(data.lead.email, data.lead.website);
+      if (!response.ok) {
+        throw new Error(`Failed to load lead: ${response.status}`);
       }
+      const data = await response.json();
+      setLead(data.lead);
+      setGeneratedEmails(data.emails || []);
+      setEditedName(data.lead.name || '');
+      setEditedCompany(data.lead.company || '');
+      setEditedEmail(data.lead.email || '');
+      setEditedWebsite(data.lead.website || '');
+      setEditedInstagram(data.lead.instagram || '');
+      setEditedFacebook(data.lead.facebook || '');
+      setEditedSubstack(data.lead.substack || '');
+      setEditedThreads(data.lead.threads || '');
+      setEditedLinkedIn(data.lead.linkedin || '');
+      setEditedStatus(data.lead.status || 'new');
+      setEditedNextAction(data.lead.next_action || '');
+      setProfilePictureUrl(data.lead.profile_picture || '');
+      
+      // Set personalization fields
+      setEditedMutualConnection(data.lead.mutual_connection_name || '');
+      setEditedHookStory(data.lead.specific_hook_story || '');
+      setEditedProblemStatement(data.lead.problem_statement || '');
+      setEditedCaseStudy(data.lead.case_study_reference || '');
+      setEditedPdfUrl(data.lead.pdf_url || '');
+      setEditedMockupSiteUrl(data.lead.mockup_site_url || '');
+      
+      // Check if domain is blacklisted
+      checkBlacklist(data.lead.email, data.lead.website);
     } catch (err) {
       console.error('Failed to fetch lead:', err);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load lead');
     }
   };
 
@@ -798,10 +811,48 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
     alert('✅ Raw lead data copied to clipboard!');
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-3" />
+          <div className="text-slate-500">Loading lead...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 mb-4">⚠️ {loadError}</div>
+          <button
+            onClick={() => router.push('/')}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            Back to Pipeline
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show not found state  
   if (!lead) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="text-slate-500">Loading...</div>
+        <div className="text-center">
+          <div className="text-slate-500 mb-4">Lead not found</div>
+          <button
+            onClick={() => router.push('/')}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            Back to Pipeline
+          </button>
+        </div>
       </div>
     );
   }

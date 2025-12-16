@@ -146,13 +146,7 @@ export default function Home() {
                     <TrendingUp className="w-4 h-4" />
                     Follow-up Pipeline
                   </button>
-                  <a
-                    href="/pipeline/waiting-room"
-                    className="w-full flex items-center gap-2 px-4 py-2 text-left transition-colors text-slate-600 hover:bg-slate-50"
-                  >
-                    <Clock className="w-4 h-4" />
-                    Waiting Room
-                  </a>
+
                 </div>
               </div>
               

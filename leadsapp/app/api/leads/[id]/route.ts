@@ -82,6 +82,25 @@ export async function PATCH(
         newValue: status,
         description: formatStatusChange(currentLead.status, status),
       });
+
+      // AUTO-REMOVE from email queue if status changes to excluded status
+      const excludedStatuses = [
+        'replied_not_fit', 'replied_interested', 'call_booked', 
+        'call_done_thinking', 'won', 'lost', 'site_live', 'email_bounced'
+      ];
+      
+      if (excludedStatuses.includes(status)) {
+        const { data: removed, error: removeError } = await supabaseAdmin
+          .from('email_send_queue')
+          .delete()
+          .eq('lead_id', id)
+          .in('status', ['approved', 'sending'])
+          .select();
+        
+        if (removed && removed.length > 0) {
+          console.log(`🗑️ Auto-removed ${removed.length} queued email(s) for lead ${id} (status: ${status})`);
+        }
+      }
     }
 
     console.log('✅ Lead updated successfully');

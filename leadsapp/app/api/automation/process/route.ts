@@ -112,13 +112,14 @@ export async function POST(request: NextRequest) {
             .eq('id', lead.id);
 
           // Log activity
-          await logLeadActivity(lead.id, {
-            action: 'automation_stage_change',
+          await logLeadActivity({
+            leadId: lead.id,
+            actionType: 'status_change',
             source: 'automation',
-            details: {
+            description: 'Website scraped, moved to Stage 1',
+            metadata: {
               fromStage: 0,
               toStage: 1,
-              description: 'Website scraped',
               emailExtracted: extractedEmail || null,
             },
           });
@@ -141,13 +142,12 @@ export async function POST(request: NextRequest) {
             .eq('id', lead.id);
 
           // Log scraping failure
-          await logLeadActivity(lead.id, {
-            action: 'automation_error',
+          await logLeadActivity({
+            leadId: lead.id,
+            actionType: 'status_change',
             source: 'automation',
-            details: {
-              stage: 0,
-              error: `Scraping failed: ${errorMessage}`,
-            },
+            description: `Scraping failed: ${errorMessage}`,
+            metadata: { stage: 0 },
           });
 
           results.errors.push(`${lead.name}: ${errorMessage}`);
@@ -201,14 +201,12 @@ export async function POST(request: NextRequest) {
             .eq('id', lead.id);
 
           // Log activity
-          await logLeadActivity(lead.id, {
-            action: 'automation_stage_change',
+          await logLeadActivity({
+            leadId: lead.id,
+            actionType: 'analysis_run',
             source: 'ai_agent',
-            details: {
-              fromStage: 1,
-              toStage: 2,
-              description: 'AI analysis completed',
-            },
+            description: 'AI analysis completed, moved to Stage 2',
+            metadata: { fromStage: 1, toStage: 2 },
           });
 
           console.log(`✅ ${lead.name} moved to Stage 2 (analyzed)`);
@@ -229,13 +227,12 @@ export async function POST(request: NextRequest) {
             .eq('id', lead.id);
 
           // Log AI analysis failure
-          await logLeadActivity(lead.id, {
-            action: 'automation_error',
+          await logLeadActivity({
+            leadId: lead.id,
+            actionType: 'analysis_run',
             source: 'ai_agent',
-            details: {
-              stage: 1,
-              error: `AI analysis failed: ${errorMessage}`,
-            },
+            description: `AI analysis failed: ${errorMessage}`,
+            metadata: { stage: 1 },
           });
 
           results.errors.push(`${lead.name}: ${errorMessage}`);

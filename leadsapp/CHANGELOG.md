@@ -2,6 +2,56 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.7.0] - 2025-12-16
+
+### 🚀 Email Scheduler: Server-Side Cron System Complete
+
+Implemented the full 4-phase plan from `IMPLEMENTATION_PHASES.md` - transitioning from fragile browser-based polling to a robust server-side email scheduler.
+
+### Added
+
+#### Phase 1: Shared Services & Security
+- **`lib/gmail-sender.ts`**: Extracted email sending logic from API routes
+- **`lib/analysis-service.ts`**: Extracted lead analysis logic
+- **`lib/cron-security.ts`**: CRON_SECRET verification utilities
+- **"Stop on Reply" fix**: Cancels pending emails when reply/bounce detected
+
+#### Phase 2: Database Enhancements
+- **Retry logic**: `retry_count`, `next_retry_at` columns for automatic retries (max 3)
+- **Stuck job detection**: `sending_started_at` for watchdog recovery
+- **Audit trail**: `email_send_attempts` table logs every send attempt
+- **Atomic batch claiming**: `claim_next_emails()` function with `FOR UPDATE SKIP LOCKED`
+- **Watchdog function**: `recover_stuck_emails()` recovers crashed jobs
+- **Data integrity trigger**: Syncs `to_email` when lead's email changes
+
+#### Phase 3: GitHub Actions Cron Scheduler
+- **`/api/cron/send-emails`**: Server-side endpoint for automated sending
+- **`.github/workflows/email-scheduler.yml`**: Runs every 5 minutes
+- **Business hours enforcement**: 9 AM - 6 PM Eastern, weekdays only
+- **Concurrency protection**: Only one scheduler runs at a time
+
+#### Phase 4: UI & Monitoring
+- **Failed tab in Waiting Room**: View all failed emails with error messages
+- **Retry actions**: Retry single or all failed emails
+- **Dismiss actions**: Remove failed emails from queue
+- **Tab navigation**: Approved / Pending Review / Failed
+
+### Changed
+- **API routes**: No longer self-fetch via HTTP; call shared lib functions directly
+- **`automation/process/route.ts`**: Added CRON_SECRET verification
+- **`approve-queue/route.ts`**: Added PATCH method for retry functionality
+
+### Removed
+- **Old SQL migration files**: Consolidated into `supabase-schema.sql`
+  - Deleted: ADD_EMAIL_BOUNCED_STATUS.sql, ADD_LAST_TOUCH_DATE_MIGRATION.sql, DOMAIN_BLACKLIST_MIGRATION.sql, EMAIL_QUEUE_MIGRATION.sql, FIX_AUTOMATION_STAGES.sql, GMAIL_FOLLOWUP_MIGRATION.sql, GMAIL_OAUTH_MIGRATION.sql, GMAIL_THREADING_MIGRATION.sql, LEAD_ACTIVITY_LOG_MIGRATION.sql, TEST_FOLLOWUP_DATA.sql, UPDATE_STATUS_NAMES_MIGRATION.sql, PHASE2_QUEUE_ENHANCEMENT.sql
+
+### Configuration Required
+- Add `CRON_SECRET` to Vercel Environment Variables
+- Add `CRON_SECRET` and `LEADSAPP_URL` to GitHub Repository Secrets
+- Set Vercel Root Directory to `leadsapp`
+
+---
+
 ## [2.6.0] - 2025-12-16
 
 ### 🏗️ Architecture: Robust Email Scheduler & App Hardening

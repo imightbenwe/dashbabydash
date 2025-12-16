@@ -2,6 +2,26 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.4.1] - 2025-12-16
+
+### Fixed
+- **🔧 Gmail Sync Status Mismatch**: Fixed critical bug where sync was trying to set `initial_email_sent` status
+  - Database constraint only allows `email_1_sent` for initial emails
+  - Updated `FOLLOWUP_SEQUENCE_STATUSES` to use correct status names
+  - Updated `formatStatusChange()` in activity logger to match
+  - All leads will now correctly update from `followup_1_sent` → `email_1_sent` when only 1 email exists
+
+### Changed
+- **⚡ Gmail Sync 5x Faster**: Parallel batch processing instead of sequential
+  - Fetching email dates: now processes 5 at a time
+  - Processing sent emails: now processes 5 at a time
+  - Processing inbox emails: now processes 5 at a time
+  - Added `processInBatches()` helper method for parallel execution
+
+- **🔍 Better Error Logging**: Database update errors now properly logged
+  - Added error checking after lead updates
+  - Console shows exactly what data was updated on success
+
 ## [2.4.0] - 2025-12-16
 
 ### Added

@@ -56,7 +56,7 @@ export async function logLeadActivity(params: LogActivityParams): Promise<void> 
 export function formatStatusChange(oldStatus: string | null, newStatus: string): string {
   const statusLabels: Record<string, string> = {
     lead_collected: 'Lead Collected',
-    initial_email_sent: 'Initial Email Sent',
+    email_1_sent: 'Initial Email Sent',  // Database uses email_1_sent
     followup_1_sent: 'Follow-up #1 Sent',
     followup_2_sent: 'Follow-up #2 Sent',
     followup_3_sent: 'Follow-up #3 Sent',

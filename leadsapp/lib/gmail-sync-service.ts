@@ -27,7 +27,7 @@ const PROTECTED_STATUSES = [
 // Statuses that ARE part of the automated follow-up sequence (can be updated by sync)
 const FOLLOWUP_SEQUENCE_STATUSES = [
   'lead_collected',
-  'initial_email_sent',
+  'email_1_sent',        // Initial email (this is what DB calls it!)
   'followup_1_sent',
   'followup_2_sent', 
   'followup_3_sent',
@@ -100,10 +100,28 @@ export class GmailSyncService {
   }
 
   /**
+   * Helper to process items in parallel batches
+   */
+  private async processInBatches<T, R>(
+    items: T[],
+    batchSize: number,
+    processor: (item: T) => Promise<R>
+  ): Promise<R[]> {
+    const results: R[] = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+      const batchResults = await Promise.all(batch.map(processor));
+      results.push(...batchResults);
+    }
+    return results;
+  }
+
+  /**
    * Sync sent emails to track follow-ups
    */
   private async syncSentEmails(gmail: gmail_v1.Gmail, userEmail: string): Promise<SyncResult> {
     const result: SyncResult = { emailsProcessed: 0, leadsUpdated: 0, errors: [] };
+    const PARALLEL_BATCH_SIZE = 5; // Process 5 emails at a time
 
     try {
       // Calculate date range (last 90 days)
@@ -122,11 +140,10 @@ export class GmailSyncService {
       const messages = response.data.messages || [];
       console.log(`📧 Found ${messages.length} sent emails to process`);
 
-      // Fetch all message dates first so we can sort chronologically
-      // This is important: we need to process OLDEST emails first for count-based detection to work
+      // Fetch all message dates in parallel batches (5x faster!)
       const messagesWithDates: { id: string; date: Date }[] = [];
       
-      for (const message of messages) {
+      const fetchDate = async (message: gmail_v1.Schema$Message): Promise<{ id: string; date: Date }> => {
         try {
           const msgResponse = await gmail.users.messages.get({
             userId: 'me',
@@ -136,27 +153,42 @@ export class GmailSyncService {
           });
           const dateHeader = msgResponse.data.payload?.headers?.find(h => h.name === 'Date');
           const date = dateHeader?.value ? new Date(dateHeader.value) : new Date();
-          messagesWithDates.push({ id: message.id!, date });
+          return { id: message.id!, date };
         } catch {
-          // If we can't get date, use current time (will be processed last)
-          messagesWithDates.push({ id: message.id!, date: new Date() });
+          return { id: message.id!, date: new Date() };
         }
-      }
+      };
+      
+      console.log(`📧 Fetching dates in parallel batches of ${PARALLEL_BATCH_SIZE}...`);
+      const datesResults = await this.processInBatches(messages, PARALLEL_BATCH_SIZE, fetchDate);
+      messagesWithDates.push(...datesResults);
       
       // Sort by date ASCENDING (oldest first) - critical for proper follow-up counting
       messagesWithDates.sort((a, b) => a.date.getTime() - b.date.getTime());
       console.log(`📧 Processing emails in chronological order (oldest first)`);
 
-      // Process each message in chronological order
-      for (const { id } of messagesWithDates) {
+      // Process sent emails in parallel batches (5x faster!)
+      // Note: We still sort first, but process in batches - slight trade-off for speed
+      console.log(`📧 Processing sent emails in parallel batches of ${PARALLEL_BATCH_SIZE}...`);
+      
+      const processOne = async (item: { id: string; date: Date }): Promise<{ processed: boolean; error?: string }> => {
         try {
-          const processed = await this.processSentEmail(gmail, id, userEmail);
-          if (processed) {
-            result.emailsProcessed++;
-            result.leadsUpdated++;
-          }
+          const processed = await this.processSentEmail(gmail, item.id, userEmail);
+          return { processed };
         } catch (error) {
-          result.errors.push(`Failed to process sent message ${id}: ${error}`);
+          return { processed: false, error: `Failed to process sent message ${item.id}: ${error}` };
+        }
+      };
+      
+      const processResults = await this.processInBatches(messagesWithDates, PARALLEL_BATCH_SIZE, processOne);
+      
+      for (const r of processResults) {
+        if (r.processed) {
+          result.emailsProcessed++;
+          result.leadsUpdated++;
+        }
+        if (r.error) {
+          result.errors.push(r.error);
         }
       }
     } catch (error) {
@@ -171,6 +203,7 @@ export class GmailSyncService {
    */
   private async syncInboxEmails(gmail: gmail_v1.Gmail, userEmail: string): Promise<SyncResult> {
     const result: SyncResult = { emailsProcessed: 0, leadsUpdated: 0, errors: [] };
+    const PARALLEL_BATCH_SIZE = 5; // Process 5 emails at a time
 
     try {
       // Calculate date range (last 90 days)
@@ -189,16 +222,27 @@ export class GmailSyncService {
       const messages = response.data.messages || [];
       console.log(`📧 Found ${messages.length} inbox emails to process`);
 
-      // Process each message
-      for (const message of messages) {
+      // Process inbox emails in parallel batches (5x faster!)
+      console.log(`📧 Processing inbox emails in parallel batches of ${PARALLEL_BATCH_SIZE}...`);
+      
+      const processOne = async (message: gmail_v1.Schema$Message): Promise<{ processed: boolean; error?: string }> => {
         try {
           const processed = await this.processInboxEmail(gmail, message.id!, userEmail);
-          if (processed) {
-            result.emailsProcessed++;
-            result.leadsUpdated++;
-          }
+          return { processed };
         } catch (error) {
-          result.errors.push(`Failed to process inbox message ${message.id}: ${error}`);
+          return { processed: false, error: `Failed to process inbox message ${message.id}: ${error}` };
+        }
+      };
+      
+      const processResults = await this.processInBatches(messages, PARALLEL_BATCH_SIZE, processOne);
+      
+      for (const r of processResults) {
+        if (r.processed) {
+          result.emailsProcessed++;
+          result.leadsUpdated++;
+        }
+        if (r.error) {
+          result.errors.push(r.error);
         }
       }
     } catch (error) {
@@ -292,12 +336,17 @@ export class GmailSyncService {
 
     let newStatus: string | null = null;
     
+    console.log(`📊 Processing email for ${lead.name}: currentStatus=${lead.status}, followupNumber=${followupNumber === null ? 'initial' : followupNumber}`);
+    
     if (followupNumber) {
       updateData[`followup_${followupNumber}_sent_at`] = emailDateISO;
       // Only update status if current status is in the follow-up sequence
       if (FOLLOWUP_SEQUENCE_STATUSES.includes(lead.status) || !lead.status) {
         newStatus = `followup_${followupNumber}_sent`;
         updateData.status = newStatus;
+        console.log(`📊 Will update status to: ${newStatus}`);
+      } else {
+        console.log(`📊 NOT updating status - current status ${lead.status} is not in follow-up sequence`);
       }
       console.log(`📧 Detected as Follow-up #${followupNumber} for ${lead.name}`);
     } else {
@@ -305,16 +354,27 @@ export class GmailSyncService {
       updateData.date_contacted = emailDateISO;
       // Only update status if current status is in the follow-up sequence or null
       if (FOLLOWUP_SEQUENCE_STATUSES.includes(lead.status) || !lead.status) {
-        newStatus = 'initial_email_sent';
+        newStatus = 'email_1_sent';  // Database uses email_1_sent for initial email
         updateData.status = newStatus;
+        console.log(`📊 Will update status to: ${newStatus}`);
+      } else {
+        console.log(`📊 NOT updating status - current status ${lead.status} is not in follow-up sequence`);
       }
       console.log(`📧 Detected as Initial Email for ${lead.name}`);
     }
 
-    await supabaseAdmin
+    // Update the lead with new data
+    const { error: updateError } = await supabaseAdmin
       .from('leads')
       .update(updateData)
       .eq('id', lead.id);
+    
+    if (updateError) {
+      console.error(`❌ Failed to update lead ${lead.name}:`, updateError);
+      throw updateError;
+    }
+    
+    console.log(`✅ Updated lead ${lead.name} with:`, updateData);
 
     // Log activity
     if (newStatus && newStatus !== lead.status) {

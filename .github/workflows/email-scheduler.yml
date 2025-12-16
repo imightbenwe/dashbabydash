@@ -31,7 +31,7 @@ jobs:
       - name: Call Email Scheduler Endpoint
         id: scheduler
         env:
-          APP_URL: ${{ secrets.APP_URL }}
+          APP_URL: ${{ secrets.LEADSAPP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           BATCH_SIZE: ${{ github.event.inputs.batch_size || '5' }}
         run: |

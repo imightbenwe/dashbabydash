@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
         $('a[href^="mailto:"]').each((_, el) => {
           const href = $(el).attr('href');
           if (href) {
-            const email = href.replace('mailto:', '').split('?')[0]; // Remove query params
-            emailsInHtml.push(email);
+            const email = href.replace('mailto:', '').split('?')[0] || ''; // Remove query params
+            if (email) emailsInHtml.push(email);
           }
         });
         
@@ -219,17 +219,18 @@ export async function POST(request: NextRequest) {
               // Filter out common non-content links
               const path = linkUrl.pathname.toLowerCase();
               const pathSegments = path.split('/').filter(Boolean);
+              const firstSegment = pathSegments[0] || '';
               
               // Filter out Wix image transformation params and other junk
               const isImageParam = pathSegments.length === 1 && (
-                pathSegments[0].startsWith('w_') ||
-                pathSegments[0].startsWith('h_') ||
-                pathSegments[0].startsWith('al_') ||
-                pathSegments[0].startsWith('q_') ||
-                pathSegments[0].startsWith('usm_') ||
-                pathSegments[0].startsWith('enc_') ||
-                pathSegments[0].includes('quality_') ||
-                pathSegments[0].length < 3 // Skip very short paths
+                firstSegment.startsWith('w_') ||
+                firstSegment.startsWith('h_') ||
+                firstSegment.startsWith('al_') ||
+                firstSegment.startsWith('q_') ||
+                firstSegment.startsWith('usm_') ||
+                firstSegment.startsWith('enc_') ||
+                firstSegment.includes('quality_') ||
+                firstSegment.length < 3 // Skip very short paths
               );
               
               if (!path.includes('#') && 
@@ -534,7 +535,7 @@ Provide concise, practical descriptions for each image.`;
             contents: imagePrompt,
           });
           
-          imageAnalysis = result.text;
+          imageAnalysis = result.text || 'No analysis available';
           console.log(`✅ Image analysis complete! Analyzed ${allImages.length} images`);
         } else {
           imageAnalysis = 'No images found on the scraped pages.';

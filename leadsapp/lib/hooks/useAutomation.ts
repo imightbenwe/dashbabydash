@@ -29,7 +29,7 @@ export function useAutomation(enabled: boolean = true) {
     setStatus(prev => ({ ...prev, isRunning: true }));
 
     try {
-      logger.log('🤖 Triggering automation check...');
+      logger.info('🤖 Triggering automation check...');
       
       const response = await fetch('/api/automation/process', {
         method: 'POST',
@@ -53,7 +53,7 @@ export function useAutomation(enabled: boolean = true) {
 
       // Log results if any work was done
       if (data.stage0Processed > 0 || data.stage1Processed > 0) {
-        logger.log('✅ Automation processed:', {
+        logger.info('✅ Automation processed:', {
           scraped: data.stage0Processed,
           analyzed: data.stage1Processed,
         });

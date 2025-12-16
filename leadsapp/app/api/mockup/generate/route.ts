@@ -214,14 +214,20 @@ The file should start EXACTLY like this:
 
     const generatedHtml = result.text;
 
+    if (!generatedHtml) {
+      return NextResponse.json({ error: 'No content generated from AI' }, { status: 500 });
+    }
+
     // 8. Validate and clean the response
     let cleanHtml = generatedHtml.trim();
     
     // Remove markdown code blocks if present
     if (cleanHtml.includes('```html')) {
-      cleanHtml = cleanHtml.split('```html')[1].split('```')[0].trim();
+      const parts = cleanHtml.split('```html');
+      const afterHtmlMarker = parts[1] || '';
+      cleanHtml = (afterHtmlMarker.split('```')[0] || '').trim();
     } else if (cleanHtml.includes('```')) {
-      cleanHtml = cleanHtml.split('```')[1].trim();
+      cleanHtml = (cleanHtml.split('```')[1] || '').trim();
     }
 
     // Validate that it's actual HTML, not React/JSX

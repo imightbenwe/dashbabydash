@@ -14,4 +14,6 @@ export type {
   SourceType,
   LLMProvider,
   EmailType,
+  InstagramData,
+  OpenAIAnalysisResponse,
 } from './types/index';

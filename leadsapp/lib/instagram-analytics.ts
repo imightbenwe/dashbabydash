@@ -12,6 +12,9 @@ export interface InstagramPost {
     text: string;
     timestamp: string;
     likesCount: number;
+    owner?: {
+      profile_pic_url?: string;
+    };
   }>;
   likesCount: number;
   commentsCount: number;

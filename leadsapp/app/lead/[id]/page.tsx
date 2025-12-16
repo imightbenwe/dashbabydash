@@ -345,7 +345,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       const emailRegex = /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g;
       const emails = scrapedContent.match(emailRegex);
       // Filter out common false positives
-      const validEmails = emails?.filter(email => 
+      const validEmails = emails?.filter((email: string) => 
         !email.includes('example.com') && 
         !email.includes('domain.com') &&
         !email.includes('yourdomain.com') &&
@@ -357,7 +357,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       let extractedEmail = null;
       const emailsFoundMatch = scrapedContent.match(/EMAILS FOUND:\s*([^\n]+)/);
       if (emailsFoundMatch && emailsFoundMatch[1]) {
-        const foundEmails = emailsFoundMatch[1].split(',').map(e => e.trim());
+        const foundEmails = emailsFoundMatch[1].split(',').map((e: string) => e.trim());
         extractedEmail = foundEmails[0];
       } else if (validEmails && validEmails.length > 0) {
         extractedEmail = validEmails[0];

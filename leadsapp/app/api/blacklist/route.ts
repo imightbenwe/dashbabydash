@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update existing leads with this domain
-    const { data: updatedLeads, error: updateError } = await supabaseAdmin
+    const { data: updatedLeads, error: _updateError } = await supabaseAdmin
       .from('leads')
       .update({
         status: 'lost',

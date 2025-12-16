@@ -1,9 +1,9 @@
 name: Email Scheduler
 
 on:
-  # Run every 5 minutes, 24/7
+  # Run every 20 minutes, 24/7
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/20 * * * *'
   
   # Allow manual trigger for testing
   workflow_dispatch:

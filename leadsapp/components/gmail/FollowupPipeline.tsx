@@ -51,6 +51,7 @@ export function FollowupPipeline() {
   const [emailQueue, setEmailQueue] = useState<QueueItem[]>([]);
   const [newLeads, setNewLeads] = useState<Lead[]>([]); // Leads not yet contacted
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set()); // Track expanded queue items
+  const [dbQueue, setDbQueue] = useState<any[]>([]); // Actual database queue
   
   // Load settings from localStorage
   const [emailsPerHour, setEmailsPerHour] = useState(10);
@@ -343,9 +344,66 @@ export function FollowupPipeline() {
     }
   };
 
+  // Fetch the actual database queue
+  const fetchDbQueue = async () => {
+    try {
+      const response = await fetch('/api/gmail/auto-queue');
+      if (response.ok) {
+        const data = await response.json();
+        setDbQueue(data.queue || []);
+      }
+    } catch (error) {
+      console.error('Error fetching db queue:', error);
+    }
+  };
+
+  // Auto-queue emails when Pipeline loads (if not in test mode)
+  const autoQueueEmails = async () => {
+    // Only auto-queue in LIVE mode
+    const currentTestMode = localStorage.getItem('gmail_test_mode');
+    if (currentTestMode === 'true') {
+      console.log('📧 Test mode - skipping auto-queue');
+      await fetchDbQueue(); // Still fetch queue status
+      return;
+    }
+    
+    try {
+      const currentEmailsPerHour = parseInt(localStorage.getItem('gmail_emails_per_hour') || '10', 10);
+      const currentSchedule = localStorage.getItem('gmail_sending_schedule') || 'business';
+      const currentTimezone = localStorage.getItem('gmail_sending_timezone') || 'America/New_York';
+      
+      const response = await fetch('/api/gmail/auto-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          delayMinutes: 0, // No delay - queue immediately for next cron run
+          emailsPerHour: currentEmailsPerHour,
+          sendingSchedule: currentSchedule,
+          sendingTimezone: currentTimezone,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.results?.queued?.length > 0) {
+          console.log(`✅ Auto-queued ${data.results.queued.length} emails`);
+        }
+      }
+      
+      // Fetch the updated queue
+      await fetchDbQueue();
+    } catch (error) {
+      console.error('Auto-queue error:', error);
+    }
+  };
+
   useEffect(() => {
     fetchPipeline();
-    const interval = setInterval(fetchPipeline, 30 * 1000); // Refresh every 30 seconds
+    autoQueueEmails(); // Auto-queue on load
+    const interval = setInterval(() => {
+      fetchPipeline();
+      autoQueueEmails(); // Auto-queue on each refresh too
+    }, 30 * 1000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -640,8 +698,84 @@ export function FollowupPipeline() {
         </div>
       </div>
       
-      {/* Email Queue Section - Direct View */}
-      {emailQueue.length > 0 && (
+      {/* Email Queue Section - Shows ACTUAL database queue */}
+      {dbQueue.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Zap className="w-6 h-6" />
+                <div>
+                  <h3 className="font-bold text-lg">📬 Queued for Sending</h3>
+                  <p className="text-green-100 text-sm">
+                    {dbQueue.length} emails in database queue - cron runs every 20 min
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold">{dbQueue.length}</div>
+                <div className="text-sm text-green-100">actually queued</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+            {dbQueue.map((item, idx) => {
+              const itemId = `db-${item.lead_id}-${item.email_type}`;
+              const isExpanded = expandedItems.has(itemId);
+              const scheduledFor = new Date(item.scheduled_for);
+              const now = new Date();
+              const isReady = scheduledFor <= now;
+              
+              return (
+                <div key={itemId} className="bg-slate-50 border-b border-slate-100">
+                  <div 
+                    className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-100"
+                    onClick={() => toggleExpanded(itemId)}
+                  >
+                    <div className="flex items-center gap-3">
+                      {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                      <span className="text-xs font-medium text-slate-400 w-6">#{idx + 1}</span>
+                      <div className={`w-2 h-2 rounded-full ${isReady ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></div>
+                      <Link href={`/lead/${item.lead_id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                        {item.lead_name}
+                      </Link>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                        {item.email_type === 'initial' ? 'Initial' : item.email_type.replace('followup_', 'FU')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isReady ? (
+                        <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-700 font-medium">
+                          ✓ Ready for next cron
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-500">
+                          <Calendar className="w-3 h-3 inline mr-1" />
+                          {scheduledFor.toLocaleString('en-US', { 
+                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isExpanded && (
+                    <div className="px-4 py-3 bg-white border-t border-slate-100">
+                      <div className="text-xs text-slate-500 mb-1">Subject:</div>
+                      <div className="text-sm font-medium text-slate-800 mb-2">{item.subject}</div>
+                      <div className="text-xs text-slate-500 mb-1">Body:</div>
+                      <div className="text-sm text-slate-600 whitespace-pre-wrap bg-slate-50 rounded p-2 max-h-32 overflow-y-auto">{item.body}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* Email Queue Section - Shows leads READY but not yet queued (fallback) */}
+      {dbQueue.length === 0 && emailQueue.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4 text-white">
             <div className="flex items-center justify-between">

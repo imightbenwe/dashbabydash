@@ -4,7 +4,7 @@
     "body": "Hi {firstName},\n\n{emailOpening}\n\nQuick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\n\nI help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\n\nIf you want, I can take a quick look and tell you exactly where the bottleneck is.\n\nWould that be useful?\n\nCheers,\nKoen"
   },
   "auto_followup_1": {
-    "subject": "RE: {originalSubject}",
+    "subject": "RE:",
     "body": "Hi {firstName},\n\nJust wanted to quickly follow up in case my last message got buried.\n\nStill happy to take a quick look at your online flow and point out anything that might be quietly costing you clients or time.\n\nNo pressure at all, just let me know.\n\nCheers,\nKoen",
     "daysAfter": 3,
     "description": "Automatic follow-up 3 days after initial contact"

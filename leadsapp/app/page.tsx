@@ -6,13 +6,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Users, Brain, Database, MapPin, Globe, FileText, TrendingUp, Shield, Plus, Search, Settings, ChevronDown, Mail } from 'lucide-react';
+import { Users, Brain, Database, MapPin, Globe, FileText, TrendingUp, Shield, Plus, Search, Settings, ChevronDown, Mail, Clock } from 'lucide-react';
 import { NewAnalysisForm } from '@/components/forms/NewAnalysisForm';
 import { CRMTable } from '@/components/tables/CRMTable';
 import { GooglePlacesSearch } from '@/components/places/GooglePlacesSearch';
 import { DemoGenerator } from '@/components/demo/DemoGenerator';
 import { WebsiteScraper } from '@/components/scraper/WebsiteScraper';
-import { GmailFollowupQueue } from '@/components/gmail/GmailFollowupQueue';
 import { FollowupPipeline } from '@/components/gmail/FollowupPipeline';
 import { useAutomation } from '@/lib/hooks/useAutomation';
 import { BlacklistManager } from '@/components/BlacklistManager';
@@ -121,17 +120,41 @@ export default function Home() {
                 CRM
               </button>
               
-              <button
-                onClick={() => setCurrentTab('pipeline')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  currentTab === 'pipeline'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                <TrendingUp className="w-4 h-4" />
-                Pipeline
-              </button>
+              {/* Pipeline Dropdown */}
+              <div className="relative group">
+                <button
+                  onClick={() => setCurrentTab('pipeline')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    currentTab === 'pipeline'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  Pipeline
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 min-w-[180px] z-50 hidden group-hover:block">
+                  <button
+                    onClick={() => setCurrentTab('pipeline')}
+                    className={`w-full flex items-center gap-2 px-4 py-2 text-left transition-colors ${
+                      currentTab === 'pipeline'
+                        ? 'bg-indigo-50 text-indigo-600'
+                        : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    Follow-up Pipeline
+                  </button>
+                  <a
+                    href="/pipeline/waiting-room"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-left transition-colors text-slate-600 hover:bg-slate-50"
+                  >
+                    <Clock className="w-4 h-4" />
+                    Waiting Room
+                  </a>
+                </div>
+              </div>
               
               {/* Find Leads Dropdown */}
               <DropdownMenu
@@ -188,9 +211,6 @@ export default function Home() {
                 View, filter, and manage all your leads in one place
               </p>
             </div>
-            
-            {/* Gmail Follow-up Queue */}
-            <GmailFollowupQueue />
             
             {/* CRM Table */}
             <CRMTable />

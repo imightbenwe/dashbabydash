@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Mail, Clock, Send } from 'lucide-react';
 import emailTemplates from '@/lib/email-templates.json';
 
@@ -19,6 +20,8 @@ interface Lead {
   followup_1_sent_at: string | null;
   followup_2_sent_at: string | null;
   followup_3_sent_at: string | null;
+  gmail_thread_id: string | null;
+  gmail_message_id: string | null;
 }
 
 interface FollowupData {
@@ -35,6 +38,7 @@ export function GmailFollowupQueue() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [sendingLeadId, setSendingLeadId] = useState<string | null>(null);
 
   const fetchFollowups = async () => {
     try {
@@ -60,37 +64,79 @@ export function GmailFollowupQueue() {
   const handleSendFollowup = async (lead: Lead, followupNumber: 1 | 2 | 3) => {
     const firstName = lead.name.split(' ')[0];
     const template = emailTemplates[`auto_followup_${followupNumber}` as keyof typeof emailTemplates] as any;
+    const originalSubject = lead.initial_email_subject || 'Quick note after seeing your work';
     
-    // For followup #1, use RE: original subject. For others, use template subject.
-    let subject = template.subject;
-    if (followupNumber === 1 && lead.initial_email_subject) {
-      subject = `RE: ${lead.initial_email_subject}`;
-    }
+    // Replace placeholders in subject and body
+    const subject = template.subject
+      .replace(/{originalSubject}/g, originalSubject);
     
     const body = template.body
       .replace(/{firstName}/g, firstName)
-      .replace(/{originalSubject}/g, lead.initial_email_subject || 'Quick note after seeing your work');
+      .replace(/{originalSubject}/g, originalSubject);
 
-    // Open Gmail with pre-filled data
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(lead.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(gmailUrl, '_blank');
+    // Get stored Gmail user email
+    const userEmail = localStorage.getItem('gmail_user_email');
+    
+    if (!userEmail) {
+      // Fall back to opening Gmail in browser
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(lead.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(gmailUrl, '_blank');
+      
+      // Mark as sent manually
+      try {
+        await fetch('/api/gmail/mark-followup-sent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: lead.id,
+            followupNumber,
+            subject,
+          }),
+        });
+        fetchFollowups();
+      } catch (error) {
+        console.error('Error marking follow-up as sent:', error);
+      }
+      return;
+    }
 
-    // Mark as sent in database
+    // Send via Gmail API with proper threading
+    setSendingLeadId(lead.id);
     try {
-      await fetch('/api/gmail/mark-followup-sent', {
+      const response = await fetch('/api/gmail/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-email': userEmail,
+        },
         body: JSON.stringify({
           leadId: lead.id,
-          followupNumber,
+          to: lead.email,
           subject,
+          body,
+          followupNumber,
         }),
       });
+
+      const result = await response.json();
       
-      // Refresh the list
-      fetchFollowups();
+      if (response.ok) {
+        alert(`✅ Follow-up #${followupNumber} sent to ${lead.name}! (Threaded reply in same conversation)`);
+        fetchFollowups();
+      } else {
+        // If API fails, fall back to Gmail URL
+        console.error('Gmail API send failed:', result.error);
+        alert(`⚠️ Could not send via API: ${result.error}\n\nOpening Gmail to send manually...`);
+        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(lead.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.open(gmailUrl, '_blank');
+      }
     } catch (error) {
-      console.error('Error marking follow-up as sent:', error);
+      console.error('Error sending follow-up:', error);
+      // Fall back to Gmail URL
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(lead.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(gmailUrl, '_blank');
+    } finally {
+      setSendingLeadId(null);
     }
   };
 
@@ -156,7 +202,7 @@ export function GmailFollowupQueue() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="font-medium text-slate-900">{lead.name}</div>
+                        <Link href={`/lead/${lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">{lead.name}</Link>
                         <div className="text-xs text-slate-500">
                           {lead.company && `${lead.company} • `}
                           Contacted: {new Date(lead.date_contacted).toLocaleDateString()}
@@ -191,7 +237,7 @@ export function GmailFollowupQueue() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="font-medium text-slate-900">{lead.name}</div>
+                        <Link href={`/lead/${lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">{lead.name}</Link>
                         <div className="text-xs text-slate-500">
                           {lead.company && `${lead.company} • `}
                           Follow-up #1: {new Date(lead.followup_1_sent_at!).toLocaleDateString()}
@@ -226,7 +272,7 @@ export function GmailFollowupQueue() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="font-medium text-slate-900">{lead.name}</div>
+                        <Link href={`/lead/${lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">{lead.name}</Link>
                         <div className="text-xs text-slate-500">
                           {lead.company && `${lead.company} • `}
                           Follow-up #2: {new Date(lead.followup_2_sent_at!).toLocaleDateString()}

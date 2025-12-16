@@ -1,12 +1,25 @@
 # Gmail API Integration - Complete Setup Guide
 
+**Last Updated**: December 16, 2025  
+**Version**: 2.5.0
+
 ## Overview
 
-This integration automatically syncs your Gmail inbox and sent folder to:
+This integration provides complete Gmail automation for your CRM:
+
+### Sync Features
 - **Track sent follow-ups** - Automatically updates `followup_X_sent_at` and lead status
 - **Detect replies** - Classifies responses as interested/not-fit/needs-info
 - **Update last touch dates** - Keeps communication history accurate
 - **Cancel pending follow-ups** - When leads reply, stops automation
+
+### Automation Features (NEW)
+- **Automatic email sending** - Follow-ups sent at scheduled times
+- **Rate limiting** - Configure 1-30 emails per hour
+- **Business hours** - Only send during configured schedule (e.g., 9am-5pm)
+- **Timezone support** - Respects US Eastern, Pacific, Central, etc.
+- **Threaded replies** - Emails appear in same Gmail conversation
+- **Test Mode** - Preview queue without actually sending
 
 ## Step 1: Google Cloud Console Setup
 
@@ -34,6 +47,7 @@ This integration automatically syncs your Gmail inbox and sent folder to:
    - Add these scopes:
      - `https://www.googleapis.com/auth/gmail.readonly`
      - `https://www.googleapis.com/auth/gmail.modify`
+     - `https://www.googleapis.com/auth/gmail.send`
    - Click **Update** then **Save and Continue**
 6. **Test users** (while in testing mode):
    - Add your Gmail address
@@ -252,8 +266,81 @@ LIMIT 20;
 ## Next Steps
 
 After basic setup works:
-1. Add cron job for automatic hourly sync
-2. Implement webhook for real-time push notifications
+1. Configure automation settings in Gmail Settings page
+2. Test with Test Mode enabled first
+3. Switch to Live Mode when ready for automatic sending
+
+---
+
+## Email Automation System
+
+### How It Works
+
+1. **Queue Building**: System identifies leads needing follow-ups based on:
+   - Initial email sent (status = `email_1_sent`)
+   - Time since last contact (3 days for FU1, 5 days for FU2, 7 days for FU3)
+   - Not already sent that follow-up
+   - Not in terminal status (replied, won, lost, etc.)
+
+2. **Scheduling**: Emails are scheduled based on your settings:
+   - **Rate Limit**: Max emails per hour (1-30)
+   - **Schedule**: Business hours (9am-5pm), Extended (8am-8pm), or 24/7
+   - **Timezone**: Your local timezone for business hours
+
+3. **Sending**: Background process checks every minute for emails due to send:
+   - Respects rate limits (won't exceed X per hour)
+   - Only sends during configured hours
+   - Uses Gmail API with proper threading (In-Reply-To headers)
+   - Updates lead status after sending
+
+### Settings (localStorage)
+
+| Setting | Key | Values |
+|---------|-----|--------|
+| Emails per hour | `gmail_emails_per_hour` | 1, 2, 5, 10, 15, 20, 30 |
+| Schedule | `gmail_sending_schedule` | business, extended, 24_7 |
+| Timezone | `gmail_sending_timezone` | America/New_York, America/Chicago, etc. |
+| Test Mode | `gmail_test_mode` | true/false |
+
+### Test Mode vs Live Mode
+
+**Test Mode** (default):
+- Queue is calculated and displayed
+- Estimated send times shown
+- NO emails actually sent
+- Safe for development/preview
+
+**Live Mode**:
+- Emails sent automatically at scheduled times
+- Status updated after sending
+- Activity logged in lead history
+- Only enable when ready!
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/gmail/process-queue` | POST | Process pending emails (called by background) |
+| `/api/gmail/send-email` | POST | Send single email with threading |
+| `/api/gmail/disconnect` | POST | Disconnect Gmail account |
+
+### Troubleshooting Automation
+
+**Emails not sending:**
+1. Check Test Mode is OFF in Gmail Settings
+2. Verify Gmail is connected (green checkmark)
+3. Check current time is within your schedule
+4. Look at browser console for errors
+
+**Wrong send times:**
+1. Verify timezone setting matches your location
+2. Check rate limit isn't too low
+3. Ensure business hours setting is correct
+
+**Threading not working:**
+1. Verify `gmail_thread_id` exists on lead
+2. Check initial email was sent via app (not manually)
+3. Run `GMAIL_THREADING_MIGRATION.sql` if columns missing
 3. Add more sophisticated sentiment analysis (use OpenAI API)
 4. Support multiple Gmail accounts per user
 5. Add email threading detection (match entire conversation)

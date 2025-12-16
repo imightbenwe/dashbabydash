@@ -20,6 +20,7 @@ export const GMAIL_CONFIG = {
   SCOPES: [
     'https://www.googleapis.com/auth/gmail.readonly',  // Read emails
     'https://www.googleapis.com/auth/gmail.modify',    // Modify labels/marks
+    'https://www.googleapis.com/auth/gmail.send',      // Send emails (for auto follow-ups)
   ],
   
   // OAuth Client Configuration (from Google Cloud Console)

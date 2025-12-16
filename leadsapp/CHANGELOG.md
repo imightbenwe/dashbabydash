@@ -2,6 +2,89 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.5.0] - 2025-12-16
+
+### 🚨 CRITICAL FIX: Email Automation Disaster Recovery
+
+The automated email system was sending multiple duplicate emails to the same person (5 emails to Pauline in minutes). This release completely rebuilds the email sending architecture with safety-first design.
+
+### Added
+
+#### Email Queue System (Manual Approval Required)
+- **New database table**: `email_send_queue` - All emails must be approved before sending
+  - Fields: lead_id, email_type, to_email, subject, body, scheduled_for, status
+  - Status flow: `approved` → `sending` → `sent` / `failed`
+  - Migration file: `EMAIL_QUEUE_MIGRATION.sql`
+
+- **Database-level duplicate prevention**:
+  - Unique partial index: Only ONE pending email per lead per type allowed
+  - Postgres physically rejects duplicate inserts
+
+- **Atomic claim function**: `claim_next_email()` using `FOR UPDATE SKIP LOCKED`
+  - Prevents race conditions where two processes grab the same email
+  - If two cron jobs fire simultaneously, each gets a DIFFERENT email (or nothing)
+
+#### Waiting Room UI (`/pipeline/waiting-room`)
+- **Full email preview before approval**: See exact To/Subject/Body
+- **Expandable items**: Click to reveal full email content
+- **Approve & Schedule button**: Adds to queue with calculated send time
+- **Approved & Scheduled section** (green): Shows what's queued with times
+- **Pending Review section** (amber): Emails ready to be approved
+- **Skipped section** (gray, collapsed): Items with issues (missing email, etc.)
+
+#### API Endpoints
+- `GET /api/gmail/approve-queue` - Preview what could be sent + items needing attention
+- `POST /api/gmail/approve-queue` - Approve items, add to queue with scheduled times
+- `DELETE /api/gmail/approve-queue` - Remove items from queue
+- `POST /api/gmail/process-queue` - Send approved emails (with atomic claiming)
+- `GET /api/gmail/process-queue` - View current queue status
+
+### Changed
+
+- **FollowupPipeline component**: Removed automatic polling interval
+  - Added "Open Waiting Room" button instead
+  - No more background processing without user action
+
+- **Main navigation**: Pipeline dropdown now includes "Waiting Room" link
+
+- **Email preview generation**: Now fetches actual AI-generated content from `generated_emails` table
+  - Initial emails show personalized opening (not `{emailOpening}` placeholder)
+  - Follow-ups correctly use template content
+
+### Removed
+
+- **Automatic email sending**: DISABLED completely
+  - Old system had no queue, no tracking, no duplicate prevention
+  - Browser polling caused the duplicate disaster
+
+### Security
+
+- **4 layers of duplicate prevention**:
+  1. Database unique index (physical constraint)
+  2. API-level check before insert
+  3. Atomic claiming with row locking
+  4. Status tracking (`sending` prevents re-processing)
+
+- **Validation before approval**:
+  - Missing email address → Skipped section
+  - Lead already contacted → Rejected
+  - Wrong email sequence → Rejected
+
+### Documentation
+
+- `EMAIL_QUEUE_MIGRATION.sql` - Complete database setup
+- `EMAIL_SCHEDULER_PLAN.md` - Architecture plan for GitHub Actions cron
+
+### Migration Required
+
+Run in Supabase SQL Editor:
+```sql
+-- See EMAIL_QUEUE_MIGRATION.sql for full script
+-- Creates: email_send_queue table, indexes, claim function
+```
+
+---
+
 ## [2.4.1] - 2025-12-16
 
 ### Fixed

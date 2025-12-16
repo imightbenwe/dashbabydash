@@ -1,7 +1,7 @@
 # LeadsApp Architecture Documentation
 
-**Last Updated**: December 12, 2025  
-**Version**: 2.3.2  
+**Last Updated**: December 16, 2025  
+**Version**: 2.5.0  
 **Purpose**: Complete reference for AI assistants and developers working on this codebase
 
 ---

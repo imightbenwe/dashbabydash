@@ -1,12 +1,14 @@
 /**
  * FollowupPipeline Component
  * Kanban-style view showing all leads organized by follow-up stage
+ * Now includes email queue with estimated send times based on rate settings
  */
 
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Mail, Clock, Send, CheckCircle, ArrowRight } from 'lucide-react';
+import { Mail, Clock, Send, CheckCircle, ArrowRight, Zap, Play, Calendar, User } from 'lucide-react';
+import Link from 'next/link';
 import emailTemplates from '@/lib/email-templates.json';
 
 interface Lead {
@@ -20,6 +22,8 @@ interface Lead {
   followup_2_sent_at: string | null;
   followup_3_sent_at: string | null;
   profile_picture: string | null;
+  gmail_thread_id: string | null;
+  gmail_message_id: string | null;
 }
 
 interface PipelineStage {
@@ -31,13 +35,100 @@ interface PipelineStage {
   icon: any;
 }
 
+interface QueueItem {
+  lead: Lead;
+  queueType: 'initial' | 'followup_1' | 'followup_2' | 'followup_3';
+  estimatedSendTime: Date;
+  position: number;
+}
+
 export function FollowupPipeline() {
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  
+  // Email queue state
+  const [emailQueue, setEmailQueue] = useState<QueueItem[]>([]);
+  const [newLeads, setNewLeads] = useState<Lead[]>([]); // Leads not yet contacted
+  
+  // Load settings from localStorage
+  const [emailsPerHour, setEmailsPerHour] = useState(10);
+  const [sendingSchedule, setSendingSchedule] = useState('business');
+  const [sendingTimezone, setSendingTimezone] = useState('America/New_York');
+  const [testMode, setTestMode] = useState(true);
+  
+  useEffect(() => {
+    const savedEmailsPerHour = localStorage.getItem('gmail_emails_per_hour');
+    if (savedEmailsPerHour) setEmailsPerHour(parseInt(savedEmailsPerHour, 10));
+    
+    const savedSchedule = localStorage.getItem('gmail_sending_schedule');
+    if (savedSchedule) setSendingSchedule(savedSchedule);
+    
+    const savedTimezone = localStorage.getItem('gmail_sending_timezone');
+    if (savedTimezone) setSendingTimezone(savedTimezone);
+    
+    const savedTestMode = localStorage.getItem('gmail_test_mode');
+    if (savedTestMode !== null) setTestMode(savedTestMode === 'true');
+  }, []);
+  
+  // Calculate estimated send time based on position in queue and rate settings
+  // This calculates when the email will be sent in the TARGET timezone (e.g., US Eastern)
+  const calculateSendTime = (position: number, perHour: number, schedule: string, timezone: string): Date => {
+    const minutesBetweenEmails = 60 / perHour;
+    
+    // Start from now
+    let currentTime = new Date();
+    let emailsScheduled = 0;
+    
+    // Keep advancing time until we've scheduled enough emails
+    while (emailsScheduled <= position) {
+      // Get the hour in the target timezone
+      const tzHour = parseInt(currentTime.toLocaleString('en-US', { 
+        timeZone: timezone, 
+        hour: 'numeric', 
+        hour12: false 
+      }));
+      
+      // Determine if we're in sending hours
+      let inSendingHours = true;
+      if (schedule === 'business') {
+        inSendingHours = tzHour >= 9 && tzHour < 18; // 9 AM - 6 PM
+      } else if (schedule === 'extended') {
+        inSendingHours = tzHour >= 7 && tzHour < 21; // 7 AM - 9 PM
+      }
+      // 'around_clock' is always true
+      
+      if (inSendingHours) {
+        if (emailsScheduled === position) {
+          return currentTime;
+        }
+        emailsScheduled++;
+      }
+      
+      // Advance time
+      currentTime = new Date(currentTime.getTime() + minutesBetweenEmails * 60 * 1000);
+      
+      // If we've gone a full day without finding a slot, something's wrong
+      if (currentTime.getTime() - Date.now() > 48 * 60 * 60 * 1000) {
+        return currentTime; // Safety break
+      }
+    }
+    
+    return currentTime;
+  };
 
   const fetchPipeline = async () => {
     try {
+      // Read settings directly from localStorage to ensure we have latest values
+      const currentEmailsPerHour = parseInt(localStorage.getItem('gmail_emails_per_hour') || '10', 10);
+      const currentSchedule = localStorage.getItem('gmail_sending_schedule') || 'business';
+      const currentTimezone = localStorage.getItem('gmail_sending_timezone') || 'America/New_York';
+      
+      // Update state to reflect current settings
+      setEmailsPerHour(currentEmailsPerHour);
+      setSendingSchedule(currentSchedule);
+      setSendingTimezone(currentTimezone);
+      
       const response = await fetch('/api/gmail/check-followups');
       if (response.ok) {
         const data = await response.json();
@@ -45,7 +136,16 @@ export function FollowupPipeline() {
         // Also get leads that have sent all follow-ups
         const leadsResponse = await fetch('/api/leads');
         const leadsData = await leadsResponse.json();
-        const allContactedLeads = leadsData.leads.filter((l: any) => l.date_contacted !== null);
+        const allLeads = leadsData.leads || [];
+        const allContactedLeads = allLeads.filter((l: any) => l.date_contacted !== null);
+        
+        // Get leads that haven't been contacted yet (for Initial Email queue)
+        const notContactedLeads = allLeads.filter((l: any) => 
+          l.date_contacted === null && 
+          l.email && 
+          !['replied_not_fit', 'replied_interested', 'call_booked', 'call_done_thinking', 'won', 'lost', 'site_live', 'email_bounced'].includes(l.status)
+        );
+        setNewLeads(notContactedLeads);
 
         // Calculate upcoming leads (not ready yet)
         const now = new Date();
@@ -70,8 +170,62 @@ export function FollowupPipeline() {
         const completed = allContactedLeads.filter((lead: Lead) => 
           lead.followup_3_sent_at !== null
         );
+        
+        // Build email queue with estimated send times
+        const queueItems: QueueItem[] = [];
+        let position = 0;
+        
+        // Add initial emails (new leads)
+        notContactedLeads.forEach((lead: Lead) => {
+          queueItems.push({
+            lead,
+            queueType: 'initial',
+            estimatedSendTime: calculateSendTime(position, currentEmailsPerHour, currentSchedule, currentTimezone),
+            position: position++,
+          });
+        });
+        
+        // Add followup_1 ready leads
+        (data.followups.followup_1 || []).forEach((lead: Lead) => {
+          queueItems.push({
+            lead,
+            queueType: 'followup_1',
+            estimatedSendTime: calculateSendTime(position, currentEmailsPerHour, currentSchedule, currentTimezone),
+            position: position++,
+          });
+        });
+        
+        // Add followup_2 ready leads
+        (data.followups.followup_2 || []).forEach((lead: Lead) => {
+          queueItems.push({
+            lead,
+            queueType: 'followup_2',
+            estimatedSendTime: calculateSendTime(position, currentEmailsPerHour, currentSchedule, currentTimezone),
+            position: position++,
+          });
+        });
+        
+        // Add followup_3 ready leads
+        (data.followups.followup_3 || []).forEach((lead: Lead) => {
+          queueItems.push({
+            lead,
+            queueType: 'followup_3',
+            estimatedSendTime: calculateSendTime(position, currentEmailsPerHour, currentSchedule, currentTimezone),
+            position: position++,
+          });
+        });
+        
+        setEmailQueue(queueItems);
 
         setStages([
+          {
+            id: 'new-leads',
+            title: 'Initial Email',
+            description: 'Not yet contacted',
+            leads: notContactedLeads,
+            color: 'bg-blue-50 border-blue-300',
+            icon: User,
+          },
           {
             id: 'upcoming-fu1',
             title: 'Warming Up',
@@ -139,46 +293,197 @@ export function FollowupPipeline() {
 
   useEffect(() => {
     fetchPipeline();
-    const interval = setInterval(fetchPipeline, 2 * 60 * 1000); // Refresh every 2 minutes
+    const interval = setInterval(fetchPipeline, 30 * 1000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, []);
+
+  // Approval queue state
+  const [approvedQueue, setApprovedQueue] = useState<any[]>([]);
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvalMessage, setApprovalMessage] = useState('');
+
+  // Fetch approved queue
+  const fetchApprovedQueue = async () => {
+    try {
+      const response = await fetch('/api/gmail/process-queue');
+      if (response.ok) {
+        const data = await response.json();
+        setApprovedQueue(data.queue || []);
+      }
+    } catch (error) {
+      console.error('Error fetching approved queue:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchApprovedQueue();
+    const interval = setInterval(fetchApprovedQueue, 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Approve all items in queue for sending
+  const handleApproveAll = async () => {
+    if (emailQueue.length === 0) return;
+    
+    setIsApproving(true);
+    setApprovalMessage('');
+    
+    try {
+      const items = emailQueue.map(q => ({
+        leadId: q.lead.id,
+        emailType: q.queueType,
+      }));
+
+      const response = await fetch('/api/gmail/approve-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items,
+          emailsPerHour,
+          sendingSchedule,
+          sendingTimezone,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setApprovalMessage(`✅ Approved ${result.totalApproved} emails for sending`);
+        if (result.totalSkipped > 0) {
+          setApprovalMessage(prev => `${prev} (${result.totalSkipped} skipped)`);
+        }
+        fetchPipeline();
+        fetchApprovedQueue();
+      } else {
+        setApprovalMessage(`❌ Error: ${result.error}`);
+      }
+    } catch (error) {
+      setApprovalMessage(`❌ Error: ${error}`);
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  // Approve a single item
+  const handleApproveSingle = async (leadId: string, emailType: string) => {
+    try {
+      const response = await fetch('/api/gmail/approve-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ leadId, emailType }],
+          emailsPerHour,
+          sendingSchedule,
+          sendingTimezone,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success && result.totalApproved > 0) {
+        fetchPipeline();
+        fetchApprovedQueue();
+      }
+    } catch (error) {
+      console.error('Error approving:', error);
+    }
+  };
+
+  // Automation state - DISABLED for safety
+  // Now requires manual approval via the approve-queue API
+  const [automationStatus] = useState<string>('Manual Approval Required');
+  const [lastAutomationRun] = useState<Date | null>(null);
+
+  // NOTE: Automatic sending is DISABLED
+  // The process-queue endpoint now only sends from the approved email_send_queue table
+  // Use /api/gmail/approve-queue to:
+  // - GET: See what emails are ready to be queued
+  // - POST: Approve items and add to send queue with scheduled times
+  // - DELETE: Remove items from the queue
 
   const handleSendFollowup = async (lead: Lead, followupNumber: 1 | 2 | 3) => {
     const firstName = lead.name.split(' ')[0];
     const template = emailTemplates[`auto_followup_${followupNumber}` as keyof typeof emailTemplates] as any;
+    const originalSubject = lead.initial_email_subject || 'Quick note after seeing your work';
     
-    let subject = template.subject;
-    if (followupNumber === 1 && lead.initial_email_subject) {
-      subject = `RE: ${lead.initial_email_subject}`;
-    }
+    // Replace placeholders in subject and body
+    const subject = template.subject
+      .replace(/{originalSubject}/g, originalSubject);
     
     const body = template.body
       .replace(/{firstName}/g, firstName)
-      .replace(/{originalSubject}/g, lead.initial_email_subject || 'Quick note after seeing your work');
+      .replace(/{originalSubject}/g, originalSubject);
 
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(lead.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(gmailUrl, '_blank');
+    // Get stored Gmail user email
+    const userEmail = localStorage.getItem('gmail_user_email');
+    
+    if (!userEmail) {
+      // Fall back to opening Gmail in browser
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(lead.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(gmailUrl, '_blank');
+      
+      // Mark as sent manually
+      try {
+        await fetch('/api/gmail/mark-followup-sent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: lead.id,
+            followupNumber,
+            subject,
+          }),
+        });
+        fetchPipeline();
+        setSelectedLead(null);
+      } catch (error) {
+        console.error('Error marking follow-up as sent:', error);
+      }
+      return;
+    }
 
+    // Send via Gmail API with proper threading
     try {
-      await fetch('/api/gmail/mark-followup-sent', {
+      const response = await fetch('/api/gmail/send-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-email': userEmail,
+        },
         body: JSON.stringify({
           leadId: lead.id,
-          followupNumber,
+          to: lead.email,
           subject,
+          body,
+          followupNumber,
         }),
       });
+
+      const result = await response.json();
       
-      fetchPipeline();
-      setSelectedLead(null);
+      if (response.ok) {
+        alert(`✅ Follow-up #${followupNumber} sent successfully to ${lead.name}! (Threaded reply)`);
+        fetchPipeline();
+        setSelectedLead(null);
+      } else {
+        // If API fails, fall back to Gmail URL
+        console.error('Gmail API send failed:', result.error);
+        alert(`⚠️ Could not send via API: ${result.error}\n\nOpening Gmail to send manually...`);
+        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(lead.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.open(gmailUrl, '_blank');
+      }
     } catch (error) {
-      console.error('Error marking follow-up as sent:', error);
+      console.error('Error sending follow-up:', error);
+      // Fall back to Gmail URL
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(lead.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(gmailUrl, '_blank');
     }
   };
 
   const getDaysInfo = (lead: Lead, stageId: string) => {
     const now = new Date();
+    
+    if (stageId === 'new-leads') {
+      return 'Ready for initial email';
+    }
     
     if (stageId === 'upcoming-fu1') {
       const daysSince = Math.floor((now.getTime() - new Date(lead.date_contacted).getTime()) / (1000 * 60 * 60 * 24));
@@ -226,7 +531,34 @@ export function FollowupPipeline() {
   }
 
   const totalLeads = stages.reduce((sum, stage) => sum + stage.leads.length, 0);
-  const readyToSend = stages.filter(s => s.id.includes('ready')).reduce((sum, stage) => sum + stage.leads.length, 0);
+  const readyToSend = stages.filter(s => s.id.includes('ready') || s.id === 'new-leads').reduce((sum, stage) => sum + stage.leads.length, 0);
+  
+  // Helper to format queue type for display
+  const getQueueTypeName = (type: string) => {
+    switch(type) {
+      case 'initial': return 'Initial Email';
+      case 'followup_1': return 'Follow-up #1';
+      case 'followup_2': return 'Follow-up #2';
+      case 'followup_3': return 'Follow-up #3';
+      default: return type;
+    }
+  };
+  
+  const getQueueTypeColor = (type: string) => {
+    switch(type) {
+      case 'initial': return 'bg-blue-100 text-blue-700';
+      case 'followup_1': return 'bg-indigo-100 text-indigo-700';
+      case 'followup_2': return 'bg-purple-100 text-purple-700';
+      case 'followup_3': return 'bg-orange-100 text-orange-700';
+      default: return 'bg-slate-100 text-slate-700';
+    }
+  };
+  
+  // Group queue by type for the display
+  const initialQueue = emailQueue.filter(q => q.queueType === 'initial');
+  const fu1Queue = emailQueue.filter(q => q.queueType === 'followup_1');
+  const fu2Queue = emailQueue.filter(q => q.queueType === 'followup_2');
+  const fu3Queue = emailQueue.filter(q => q.queueType === 'followup_3');
 
   return (
     <div className="space-y-6">
@@ -246,15 +578,219 @@ export function FollowupPipeline() {
               <div className="text-3xl font-bold text-yellow-300">{readyToSend}</div>
               <div className="text-sm text-indigo-100">Ready to Send</div>
             </div>
+            <div className="text-center">
+              <div className={`text-3xl font-bold ${testMode ? 'text-amber-300' : 'text-green-300'}`}>
+                {testMode ? 'TEST' : 'LIVE'}
+              </div>
+              <div className="text-sm text-indigo-100">Mode</div>
+            </div>
           </div>
         </div>
       </div>
+      
+      {/* Email Queue Section */}
+      {emailQueue.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Zap className="w-6 h-6" />
+                <div>
+                  <h3 className="font-bold text-lg">Emails Pending Review</h3>
+                  <p className="text-amber-100 text-sm">
+                    {emailQueue.length} emails ready - review in Waiting Room before sending
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                {/* Approved Queue Count */}
+                {approvedQueue.length > 0 && (
+                  <div className="text-right bg-emerald-600 px-3 py-2 rounded-lg">
+                    <div className="text-lg font-bold">{approvedQueue.length}</div>
+                    <div className="text-xs text-emerald-200">Approved</div>
+                  </div>
+                )}
+                {/* Go to Waiting Room Button */}
+                <a
+                  href="/pipeline/waiting-room"
+                  className="px-4 py-2 bg-white text-amber-700 rounded-lg font-semibold hover:bg-amber-50 flex items-center gap-2"
+                >
+                  <Clock className="w-4 h-4" />
+                  Open Waiting Room
+                </a>
+                <div className="text-right">
+                  <div className="text-2xl font-bold">{emailQueue.length}</div>
+                  <div className="text-sm text-amber-100">pending</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="divide-y divide-slate-100">
+            {/* Initial Email Queue */}
+            {initialQueue.length > 0 && (
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <h4 className="font-semibold text-slate-800">Initial Email</h4>
+                  <span className="text-sm text-slate-500">({initialQueue.length} leads)</span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {initialQueue.map((item, idx) => (
+                    <div key={item.lead.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-slate-400 w-6">#{idx + 1}</span>
+                        <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">
+                          {item.lead.name}
+                        </Link>
+                        <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-xs text-slate-600">
+                          <Calendar className="w-3 h-3" />
+                          {item.estimatedSendTime.toLocaleString('en-US', { 
+                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                          })}
+                        </div>
+                        <button
+                          onClick={() => handleApproveSingle(item.lead.id, 'initial')}
+                          className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 flex items-center gap-1"
+                        >
+                          <CheckCircle className="w-3 h-3" />
+                          Approve
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Follow-up #1 Queue */}
+            {fu1Queue.length > 0 && (
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                  <h4 className="font-semibold text-slate-800">Follow-up #1</h4>
+                  <span className="text-sm text-slate-500">({fu1Queue.length} leads)</span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {fu1Queue.map((item, idx) => (
+                    <div key={item.lead.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-slate-400 w-6">#{initialQueue.length + idx + 1}</span>
+                        <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">
+                          {item.lead.name}
+                        </Link>
+                        <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-xs text-slate-600">
+                          <Calendar className="w-3 h-3" />
+                          {item.estimatedSendTime.toLocaleString('en-US', { 
+                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                          })}
+                        </div>
+                        <button
+                          onClick={() => handleApproveSingle(item.lead.id, 'followup_1')}
+                          className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 flex items-center gap-1"
+                        >
+                          <CheckCircle className="w-3 h-3" />
+                          Approve
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Follow-up #2 Queue */}
+            {fu2Queue.length > 0 && (
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  <h4 className="font-semibold text-slate-800">Follow-up #2</h4>
+                  <span className="text-sm text-slate-500">({fu2Queue.length} leads)</span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {fu2Queue.map((item, idx) => (
+                    <div key={item.lead.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-slate-400 w-6">#{initialQueue.length + fu1Queue.length + idx + 1}</span>
+                        <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">
+                          {item.lead.name}
+                        </Link>
+                        <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-xs text-slate-600">
+                          <Calendar className="w-3 h-3" />
+                          {item.estimatedSendTime.toLocaleString('en-US', { 
+                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                          })}
+                        </div>
+                        <button
+                          onClick={() => handleApproveSingle(item.lead.id, 'followup_2')}
+                          className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 flex items-center gap-1"
+                        >
+                          <CheckCircle className="w-3 h-3" />
+                          Approve
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Follow-up #3 Queue */}
+            {fu3Queue.length > 0 && (
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                  <h4 className="font-semibold text-slate-800">Follow-up #3</h4>
+                  <span className="text-sm text-slate-500">({fu3Queue.length} leads)</span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {fu3Queue.map((item, idx) => (
+                    <div key={item.lead.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-slate-400 w-6">#{initialQueue.length + fu1Queue.length + fu2Queue.length + idx + 1}</span>
+                        <Link href={`/lead/${item.lead.id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline">
+                          {item.lead.name}
+                        </Link>
+                        <span className="text-sm text-slate-500">{item.lead.company || ''}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-xs text-slate-600">
+                          <Calendar className="w-3 h-3" />
+                          {item.estimatedSendTime.toLocaleString('en-US', { 
+                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                          })}
+                        </div>
+                        <button
+                          onClick={() => handleApproveSingle(item.lead.id, 'followup_3')}
+                          className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 flex items-center gap-1"
+                        >
+                          <CheckCircle className="w-3 h-3" />
+                          Approve
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Pipeline Stages */}
-      <div className="grid grid-cols-7 gap-4">
+      <div className="grid grid-cols-8 gap-4">
         {stages.map((stage) => {
           const Icon = stage.icon;
-          const isReady = stage.id.includes('ready');
+          const isReady = stage.id.includes('ready') || stage.id === 'new-leads';
           
           return (
             <div
@@ -268,6 +804,7 @@ export function FollowupPipeline() {
                 <div className="flex items-center gap-2 mb-2">
                   <Icon className={`w-5 h-5 ${
                     stage.id === 'completed' ? 'text-green-600' :
+                    stage.id === 'new-leads' ? 'text-blue-600' :
                     isReady ? 'text-indigo-600' : 'text-slate-500'
                   }`} />
                   <h3 className="font-bold text-sm text-slate-900">{stage.title}</h3>
@@ -323,10 +860,19 @@ export function FollowupPipeline() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              const fuNum = stage.id.includes('fu1') ? 1 : stage.id.includes('fu2') ? 2 : 3;
-                              handleSendFollowup(lead, fuNum as 1 | 2 | 3);
+                              if (stage.id === 'new-leads') {
+                                // Go to lead page to send initial email
+                                window.location.href = `/lead/${lead.id}`;
+                              } else {
+                                const fuNum = stage.id.includes('fu1') ? 1 : stage.id.includes('fu2') ? 2 : 3;
+                                handleSendFollowup(lead, fuNum as 1 | 2 | 3);
+                              }
                             }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700 flex items-center gap-1"
+                            className={`opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-white rounded text-xs font-medium flex items-center gap-1 ${
+                              stage.id === 'new-leads' 
+                                ? 'bg-blue-600 hover:bg-blue-700' 
+                                : 'bg-indigo-600 hover:bg-indigo-700'
+                            }`}
                           >
                             <Send className="w-3 h-3" />
                             Send

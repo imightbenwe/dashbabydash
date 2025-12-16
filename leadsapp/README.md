@@ -36,20 +36,27 @@ This Next.js application provides CRM functionality and generates static HTML de
 - Automatic personalized email generation
 - Background automation (scraping → analysis)
 
-### 2. **Google Places Integration**
+### 2. Gmail Follow-up Automation
+- Connect Gmail via OAuth for automatic email sending
+- Automated follow-up queue with rate limiting (1-30 emails/hour)
+- Business hours scheduling with timezone support
+- Threaded replies (emails appear in same conversation)
+- Test Mode for safe development/preview
+
+### 3. **Google Places Integration**
 - Search businesses by query and location
 - Filter by review count (0-25 default)
 - Track leads in Open/Dismissed/Promoted tabs
 - One-click promotion to CRM with automation
 - Search history logging for analytics
 
-### 3. **Demo Generator**
+### 4. **Demo Generator**
 - **Paste complete HTML** to create static demo pages
 - Generates files in `/demos/client-name/` folder
 - Public URL: `dashbabydash.com/demos/client-name/`
 - Perfect for showing prospects their custom sites
 
-### 4. CRM Pipeline
+### 5. CRM Pipeline
 - Track leads through different stages
 - Update status and next actions
 - Styling with [Tailwind CSS](https://tailwindcss.com)
@@ -128,7 +135,7 @@ If you wish to just develop locally and not deploy to Vercel, [follow the steps 
 
 1. **Read `ARCHITECTURE.md`** - Complete system reference with data flows, API routes, and component architecture
 2. **Check `CHANGELOG.md`** - Recent changes and reasoning behind decisions
-3. **Review `CODE_CLEANUP_PLAN_V2.md`** - Known improvement areas and optimization roadmap
+3. **See `GMAIL_SETUP_GUIDE.md`** - Gmail OAuth and automation setup
 4. **When making changes** - Update CHANGELOG.md with reasoning for future reference
 
 **Key Architecture Notes:**

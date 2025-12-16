@@ -352,6 +352,13 @@ export class GmailSyncService {
     } else {
       // This is the initial email
       updateData.date_contacted = emailDateISO;
+      // Store thread info for proper reply threading later
+      updateData.gmail_thread_id = threadId;
+      updateData.gmail_message_id = messageId;
+      // Also save the subject for threading follow-ups
+      if (subject) {
+        updateData.initial_email_subject = subject.replace(/^(Re:\s*)+/i, '').trim();
+      }
       // Only update status if current status is in the follow-up sequence or null
       if (FOLLOWUP_SEQUENCE_STATUSES.includes(lead.status) || !lead.status) {
         newStatus = 'email_1_sent';  // Database uses email_1_sent for initial email

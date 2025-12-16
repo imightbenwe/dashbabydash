@@ -1,46 +1,81 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Lock } from 'lucide-react';
-
-const APP_PASSWORD = process.env.NEXT_PUBLIC_APP_PASSWORD || 'dashbaby2025';
+import { Lock, Mail, Loader2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 export function PasswordGate({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+
+  const supabase = createClient();
 
   useEffect(() => {
-    // Check if already authenticated
-    const stored = localStorage.getItem('app_authenticated');
-    if (stored === 'true') {
-      setIsAuthenticated(true);
-    }
-    setIsLoading(false);
-  }, []);
+    // Check current session
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    };
+    
+    checkUser();
 
-  const handleSubmit = (e: React.FormEvent) => {
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === APP_PASSWORD) {
-      localStorage.setItem('app_authenticated', 'true');
-      setIsAuthenticated(true);
-      setError('');
-    } else {
-      setError('Incorrect password');
-      setPassword('');
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      if (mode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (error) throw error;
+        setError('Check your email for confirmation link!');
+        setMode('login');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
       </div>
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-8 w-full max-w-md">
@@ -53,31 +88,78 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
             PersonaAI
           </h1>
           <p className="text-gray-400 text-center mb-6">
-            Enter password to continue
+            {mode === 'login' ? 'Sign in to continue' : 'Create your account'}
           </p>
           <form onSubmit={handleSubmit}>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
-              autoFocus
-            />
+            <div className="mb-4">
+              <label className="block text-sm text-gray-400 mb-1">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-400 mb-1">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+                minLength={6}
+              />
+            </div>
             {error && (
-              <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
+              <p className={`text-sm mb-4 text-center ${error.includes('Check your email') ? 'text-green-500' : 'text-red-500'}`}>
+                {error}
+              </p>
             )}
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              disabled={isSubmitting}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             >
-              Enter
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {mode === 'login' ? 'Sign In' : 'Sign Up'}
             </button>
           </form>
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => {
+                setMode(mode === 'login' ? 'signup' : 'login');
+                setError('');
+              }}
+              className="text-blue-500 hover:text-blue-400 text-sm"
+            >
+              {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  return <>{children}</>;
+  // User is authenticated - render children with logout option available
+  return (
+    <div className="relative">
+      {/* Logout button in top-right corner */}
+      <div className="fixed top-4 right-4 z-50">
+        <button
+          onClick={handleLogout}
+          className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg border border-gray-700 transition-colors"
+        >
+          Logout ({user.email})
+        </button>
+      </div>
+      {children}
+    </div>
+  );
 }

@@ -2,6 +2,26 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.6.0] - 2025-12-16
+
+### 🏗️ Architecture: Robust Email Scheduler & App Hardening
+
+Defined the roadmap for transitioning from browser-based polling to a server-side cron architecture.
+
+### Added
+- **Implementation Roadmap**: `IMPLEMENTATION_PHASES.md` - Step-by-step guide for the migration.
+- **Revised Architecture Plan**: Updated `EMAIL_SCHEDULER_PLAN.md` with critical improvements:
+  - **No 'retry' status**: Uses `next_retry_at` to maintain unique index protection.
+  - **Batch Processing**: `claim_next_emails` for higher throughput.
+  - **Crash Recovery**: `recover_stuck_emails` watchdog.
+  - **Audit Trail**: `email_send_attempts` table.
+  - **Idempotency**: `idempotency_key` and `provider_message_id`.
+
+### Planned Improvements
+- **Security**: Locking down API endpoints with `CRON_SECRET`.
+- **Refactoring**: Extracting logic to `lib/gmail-sender.ts` to stop self-fetching.
+- **Bug Fix**: "Stop on Reply" gap in `gmail-sync-service.ts`.
+
 ## [2.5.0] - 2025-12-16
 
 ### 🚨 CRITICAL FIX: Email Automation Disaster Recovery

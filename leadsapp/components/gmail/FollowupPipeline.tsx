@@ -699,7 +699,9 @@ export function FollowupPipeline() {
       </div>
       
       {/* Email Queue Section - Shows ACTUAL database queue */}
-      {dbQueue.length > 0 && (
+      {dbQueue.length > 0 && (() => {
+        const readyCount = dbQueue.filter((item: any) => new Date(item.scheduled_for) <= new Date()).length;
+        return (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 text-white">
             <div className="flex items-center justify-between">
@@ -712,20 +714,30 @@ export function FollowupPipeline() {
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold">{dbQueue.length}</div>
-                <div className="text-sm text-green-100">actually queued</div>
+              <div className="flex gap-6">
+                {readyCount > 0 && (
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-300">{readyCount}</div>
+                    <div className="text-sm text-green-100">ready NOW</div>
+                  </div>
+                )}
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{dbQueue.length}</div>
+                  <div className="text-sm text-green-100">total queued</div>
+                </div>
               </div>
             </div>
           </div>
           
           <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-            {dbQueue.map((item, idx) => {
+            {dbQueue.map((item: any, idx: number) => {
               const itemId = `db-${item.lead_id}-${item.email_type}`;
               const isExpanded = expandedItems.has(itemId);
               const scheduledFor = new Date(item.scheduled_for);
               const now = new Date();
               const isReady = scheduledFor <= now;
+              const leadName = item.leads?.name || item.lead_name || 'Unknown';
+              const leadCompany = item.leads?.company || '';
               
               return (
                 <div key={itemId} className="bg-slate-50 border-b border-slate-100">
@@ -738,8 +750,9 @@ export function FollowupPipeline() {
                       <span className="text-xs font-medium text-slate-400 w-6">#{idx + 1}</span>
                       <div className={`w-2 h-2 rounded-full ${isReady ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`}></div>
                       <Link href={`/lead/${item.lead_id}`} className="font-medium text-slate-900 hover:text-indigo-600 hover:underline" onClick={(e) => e.stopPropagation()}>
-                        {item.lead_name}
+                        {leadName}
                       </Link>
+                      {leadCompany && <span className="text-sm text-slate-500">{leadCompany}</span>}
                       <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
                         {item.email_type === 'initial' ? 'Initial' : item.email_type.replace('followup_', 'FU')}
                       </span>
@@ -772,7 +785,8 @@ export function FollowupPipeline() {
             })}
           </div>
         </div>
-      )}
+        );
+      })()}
       
       {/* Email Queue Section - Shows leads READY but not yet queued (fallback) */}
       {dbQueue.length === 0 && emailQueue.length > 0 && (

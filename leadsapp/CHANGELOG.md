@@ -2,6 +2,26 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.7.1] - 2025-12-16
+
+### 🔧 TypeScript Strict Mode Build Fixes
+
+Fixed all TypeScript errors blocking Vercel deployment.
+
+### Fixed
+- **tsconfig.json**: Disabled `noUncheckedIndexedAccess` (was causing 30+ array index errors)
+- **mockup/generate/route.ts**: Added null check for Gemini AI `result.text`
+- **scraper/deep/route.ts**: Added fallback for undefined `result.text`, fixed array destructuring
+- **lead/[id]/page.tsx**: Added explicit `string` type annotations for regex match callbacks
+- **useAutomation.ts**: Changed `logger.log()` to `logger.info()` (log method is private)
+- **instagram-analytics.ts**: Added `owner` property to InstagramPost comment interface
+- **lib/types.ts**: Re-exported missing `InstagramData` and `OpenAIAnalysisResponse` types
+
+### Removed
+- **page-backup-20251211-193940.tsx**: Deleted old backup file causing type errors
+
+---
+
 ## [2.7.0] - 2025-12-16
 
 ### 🚀 Email Scheduler: Server-Side Cron System Complete

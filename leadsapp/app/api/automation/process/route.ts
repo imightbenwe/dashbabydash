@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           // Extract email from scraped content
           const emailRegex = /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g;
           const emails = scrapedContent.match(emailRegex);
-          const validEmails = emails?.filter(email => 
+          const validEmails = emails?.filter((email: string) => 
             !email.includes('example.com') && 
             !email.includes('domain.com') &&
             !email.includes('yourdomain.com') &&

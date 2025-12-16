@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { logLeadActivity, formatStatusChange } from '@/lib/activity-logger';
 
 export async function PATCH(
   request: NextRequest,
@@ -13,10 +14,18 @@ export async function PATCH(
       date_contacted, last_touch_date,
       mutual_connection_name, specific_hook_story, problem_statement, case_study_reference,
       pdf_url, mockup_site_url, pdf_sent_date, site_live_date,
-      initial_email_subject, followup_1_sent_at, followup_2_sent_at, followup_3_sent_at
+      initial_email_subject, followup_1_sent_at, followup_2_sent_at, followup_3_sent_at,
+      _source // Optional: source of the change (default to 'user')
     } = body;
 
     console.log(`🔄 Updating lead ${id}:`, { status, persona_score, next_action });
+
+    // Fetch current lead data for comparison (to log changes)
+    const { data: currentLead } = await supabaseAdmin
+      .from('leads')
+      .select('status, name')
+      .eq('id', id)
+      .single();
 
     const updateData: any = {};
     if (name) updateData.name = name;
@@ -60,6 +69,19 @@ export async function PATCH(
     if (error) {
       console.error('❌ Lead update error:', error);
       return NextResponse.json({ error: 'Failed to update lead' }, { status: 500 });
+    }
+
+    // Log activity for status changes
+    if (status && currentLead && status !== currentLead.status) {
+      await logLeadActivity({
+        leadId: id,
+        actionType: 'status_change',
+        source: (_source as any) || 'user',
+        fieldName: 'status',
+        oldValue: currentLead.status,
+        newValue: status,
+        description: formatStatusChange(currentLead.status, status),
+      });
     }
 
     console.log('✅ Lead updated successfully');

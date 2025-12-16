@@ -2,6 +2,51 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.4.0] - 2025-12-16
+
+### Added
+- **📋 Activity Log System**: Complete audit trail for all lead changes
+  - New `lead_activity_log` database table tracking all changes with source attribution
+  - Sources tracked: `user` (UI changes), `automation` (scraping/workflows), `gmail` (email sync), `ai_agent` (AI analysis)
+  - New component: `components/gmail/LeadActivityLog.tsx` - collapsible activity history panel
+  - New API: `app/api/leads/[id]/activity/route.ts` - GET/POST for activity logs
+  - New helper: `lib/activity-logger.ts` - `logLeadActivity()` function with formatting helpers
+  - Migration file: `LEAD_ACTIVITY_LOG_MIGRATION.sql`
+  - Activity log displays on each lead detail page with color-coded sources
+  - Logs status changes, automation stages, email detection, and errors
+
+- **📧 Email Count on Timeline**: Follow-up timeline now shows how many emails were detected during last Gmail sync
+  - `FollowupTimeline` component updated to accept `leadId` prop
+  - Activity API returns `emailsCached` count for display
+
+### Changed
+- **Lead Status Changes**: Now logged to activity log with previous/new status
+  - `app/api/leads/[id]/route.ts` PATCH handler logs all status changes (source: user)
+  
+- **Automation Process**: Now logs stage transitions and errors
+  - `app/api/automation/process/route.ts` logs Stage 0→1 (scraping) and Stage 1→2 (AI analysis)
+  - Errors during automation also logged for debugging
+  
+- **Gmail Sync**: Enhanced logging already in place from previous update
+  - Logs email detection events with email count and type
+  - Logs status changes with protected status checks
+
+## [2.3.6] - 2025-12-15
+
+### Added
+- **Database Migration**: `last_touch_date` column migration
+  - Migration file: `ADD_LAST_TOUCH_DATE_MIGRATION.sql`
+  - Adds `last_touch_date` column if missing
+  - Creates index for efficient querying
+  - Backfills existing leads with most recent follow-up timestamp
+  - Fixes "Last Touch" column showing empty in CRM table
+
+### Fixed
+- **Last Touch Date Display**: Column now properly shows when last follow-up was sent
+  - Database column added via migration if missing
+  - Already tracked in code (set when follow-ups are sent)
+  - CRM table displays last_touch_date in "Last Touch" column
+
 ## [2.3.5] - 2025-12-15
 
 ### Added

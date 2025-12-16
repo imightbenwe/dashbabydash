@@ -24,15 +24,21 @@ export async function POST(request: NextRequest) {
     const updateData: any = {};
     const now = new Date().toISOString();
 
+    // Always update last_touch_date when a follow-up is sent
+    updateData.last_touch_date = now;
+
     switch (followupNumber) {
       case 1:
         updateData.followup_1_sent_at = now;
+        updateData.status = 'followup_1_sent';
         break;
       case 2:
         updateData.followup_2_sent_at = now;
+        updateData.status = 'followup_2_sent';
         break;
       case 3:
         updateData.followup_3_sent_at = now;
+        updateData.status = 'followup_3_sent';
         break;
       default:
         return NextResponse.json(

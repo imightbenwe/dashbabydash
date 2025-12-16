@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Brain, ArrowLeft, Sparkles, Database, Mail, Save, Edit2, ExternalLink, Instagram, Facebook, Linkedin, FileText, MessageSquare, Globe, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { FollowupTimeline } from '@/components/gmail/FollowupTimeline';
+import { LeadActivityLog } from '@/components/gmail/LeadActivityLog';
 
 export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -1350,8 +1351,12 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
             followup3SentAt={lead.followup_3_sent_at}
             status={lead.status}
             compact={false}
+            leadId={leadId}
           />
         )}
+
+        {/* Activity Log */}
+        <LeadActivityLog leadId={leadId} />
 
         {/* Instagram Engagement Analytics */}
         {(lead.total_posts_analyzed > 0 || lead.top_commenter_username) && (

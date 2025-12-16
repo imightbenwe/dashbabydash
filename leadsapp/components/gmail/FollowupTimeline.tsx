@@ -5,6 +5,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Calendar, Clock, CheckCircle, Circle, Mail, XCircle, AlertTriangle, Phone, ThumbsDown, ThumbsUp, Trophy, Rocket } from 'lucide-react';
 
 interface TimelineProps {
@@ -14,6 +15,7 @@ interface TimelineProps {
   followup3SentAt: string | null;
   status: string;
   compact?: boolean;
+  leadId?: string; // Optional - if provided, shows email count
 }
 
 interface TimelineStage {
@@ -33,7 +35,20 @@ export function FollowupTimeline({
   followup3SentAt,
   status,
   compact = false,
+  leadId,
 }: TimelineProps) {
+  const [emailCount, setEmailCount] = useState<number | null>(null);
+  
+  // Fetch email count if leadId is provided
+  useEffect(() => {
+    if (leadId && !compact) {
+      fetch(`/api/leads/${leadId}/activity`)
+        .then(res => res.json())
+        .then(data => setEmailCount(data.emailsCached || 0))
+        .catch(() => setEmailCount(null));
+    }
+  }, [leadId, compact]);
+
   if (!dateContacted) {
     return null;
   }
@@ -234,8 +249,16 @@ export function FollowupTimeline({
     <div className="bg-white rounded-lg border border-slate-200 p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-slate-900">Follow-up Timeline</h3>
-        <div className="text-sm text-slate-500">
-          {daysSinceContacted} day{daysSinceContacted !== 1 ? 's' : ''} since initial contact
+        <div className="flex items-center gap-4 text-sm text-slate-500">
+          {emailCount !== null && (
+            <span className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded">
+              <Mail className="w-3 h-3" />
+              {emailCount} email{emailCount !== 1 ? 's' : ''} synced
+            </span>
+          )}
+          <span>
+            {daysSinceContacted} day{daysSinceContacted !== 1 ? 's' : ''} since initial contact
+          </span>
         </div>
       </div>
 

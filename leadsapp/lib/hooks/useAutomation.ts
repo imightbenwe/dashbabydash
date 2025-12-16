@@ -13,7 +13,8 @@ interface AutomationStatus {
 
 /**
  * Hook to manage automation polling
- * Checks for leads needing automation every minute
+ * Checks for leads needing automation once on startup only
+ * (Follow-ups are date-based, not minute-based - no need for frequent polling)
  */
 export function useAutomation(enabled: boolean = true) {
   const [status, setStatus] = useState<AutomationStatus>({
@@ -76,13 +77,10 @@ export function useAutomation(enabled: boolean = true) {
   useEffect(() => {
     if (!enabled) return;
 
-    // Run immediately on mount
+    // Run once on startup only - follow-ups are date-based, not minute-based
     processAutomation();
-
-    // Then run every 60 seconds
-    const interval = setInterval(processAutomation, 60000);
-
-    return () => clearInterval(interval);
+    
+    // No interval - manual trigger only after startup
   }, [enabled, processAutomation]);
 
   return {

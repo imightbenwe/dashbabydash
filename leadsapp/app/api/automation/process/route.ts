@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { logLeadActivity } from '@/lib/activity-logger';
 
 /**
  * Automation Process API
@@ -102,6 +103,18 @@ export async function POST(_request: NextRequest) {
             .update(updateData)
             .eq('id', lead.id);
 
+          // Log activity
+          await logLeadActivity(lead.id, {
+            action: 'automation_stage_change',
+            source: 'automation',
+            details: {
+              fromStage: 0,
+              toStage: 1,
+              description: 'Website scraped',
+              emailExtracted: extractedEmail || null,
+            },
+          });
+
           console.log(`✅ ${lead.name} moved to Stage 1 (scraped)`);
           results.stage0Processed++;
 
@@ -118,6 +131,16 @@ export async function POST(_request: NextRequest) {
               automation_stage_updated_at: new Date().toISOString(),
             })
             .eq('id', lead.id);
+
+          // Log scraping failure
+          await logLeadActivity(lead.id, {
+            action: 'automation_error',
+            source: 'automation',
+            details: {
+              stage: 0,
+              error: `Scraping failed: ${errorMessage}`,
+            },
+          });
 
           results.errors.push(`${lead.name}: ${errorMessage}`);
         }
@@ -169,6 +192,17 @@ export async function POST(_request: NextRequest) {
             })
             .eq('id', lead.id);
 
+          // Log activity
+          await logLeadActivity(lead.id, {
+            action: 'automation_stage_change',
+            source: 'ai_agent',
+            details: {
+              fromStage: 1,
+              toStage: 2,
+              description: 'AI analysis completed',
+            },
+          });
+
           console.log(`✅ ${lead.name} moved to Stage 2 (analyzed)`);
           results.stage1Processed++;
 
@@ -185,6 +219,16 @@ export async function POST(_request: NextRequest) {
               automation_stage_updated_at: new Date().toISOString(),
             })
             .eq('id', lead.id);
+
+          // Log AI analysis failure
+          await logLeadActivity(lead.id, {
+            action: 'automation_error',
+            source: 'ai_agent',
+            details: {
+              stage: 1,
+              error: `AI analysis failed: ${errorMessage}`,
+            },
+          });
 
           results.errors.push(`${lead.name}: ${errorMessage}`);
         }

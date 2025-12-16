@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
  * Resets a lead's automation stage to retry from the failed step
  */
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {

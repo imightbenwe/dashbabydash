@@ -27,16 +27,19 @@
 *Goal: Make the database the single source of truth with atomic guarantees.*
 
 ### 2.1. Enhanced Queue Table Migration
-- [ ] Run SQL to add columns: `retry_count`, `next_retry_at`, `sending_started_at`, `idempotency_key`, `provider_message_id`.
-- [ ] **Crucial**: Do NOT add a 'retry' status. Use `next_retry_at` to gate retries.
+- [x] Run SQL to add columns: `retry_count`, `next_retry_at`, `sending_started_at`, `idempotency_key`, `provider_message_id`.
+- [x] **Crucial**: Do NOT add a 'retry' status. Use `next_retry_at` to gate retries.
 
 ### 2.2. Audit Trail & Safety Nets
-- [ ] Create `email_send_attempts` table for full history.
-- [ ] Create `claim_next_emails` function (Batch processing + Atomic locking).
-- [ ] Create `recover_stuck_emails` function (Watchdog for crashed jobs).
+- [x] Create `email_send_attempts` table for full history.
+- [x] Create `claim_next_emails` function (Batch processing + Atomic locking).
+- [x] Create `recover_stuck_emails` function (Watchdog for crashed jobs).
+- [x] Create `mark_email_sent` and `mark_email_failed` helper functions.
 
 ### 2.3. Data Integrity Triggers
-- [ ] Add trigger: When `leads.email` changes, update `email_send_queue.to_email`.
+- [x] Add trigger: When `leads.email` changes, update `email_send_queue.to_email`.
+
+**Migration file: `PHASE2_QUEUE_ENHANCEMENT.sql`** - Run in Supabase SQL Editor
 
 ---
 
@@ -44,21 +47,22 @@
 *Goal: Reliable, automated execution.*
 
 ### 3.1. Create Cron Endpoint
-- [ ] Build `/api/cron/send-emails`:
+- [x] Build `/api/cron/send-emails`:
     - Verify `CRON_SECRET`.
     - Check business hours (in code, timezone-aware).
     - Run `recover_stuck_emails`.
     - Call `claim_next_emails` (Batch size ~5).
     - Loop through batch and call `lib/gmail-sender.ts`.
     - Handle success/failure/retries with DB updates.
+    - Log attempts to `email_send_attempts` table.
 
 ### 3.2. GitHub Actions Workflow
-- [ ] Create `.github/workflows/email-scheduler.yml`.
-- [ ] Schedule: `*/5 * * * *` (Every 5 min, 24/7).
-- [ ] Configure concurrency (max 1) and timeouts.
+- [x] Create `.github/workflows/email-scheduler.yml`.
+- [x] Schedule: `*/5 * * * *` (Every 5 min, 24/7).
+- [x] Configure concurrency (max 1) and timeouts.
 
 ### 3.3. Environment Setup
-- [ ] Generate `CRON_SECRET`.
+- [x] Document `CRON_SECRET` setup (see SCHEDULER_SETUP.md).
 - [ ] Add to Vercel Environment Variables.
 - [ ] Add to GitHub Repository Secrets.
 

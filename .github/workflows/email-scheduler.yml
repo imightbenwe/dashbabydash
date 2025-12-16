@@ -1,0 +1,108 @@
+name: Email Scheduler
+
+on:
+  # Run every 5 minutes, 24/7
+  schedule:
+    - cron: '*/5 * * * *'
+  
+  # Allow manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      batch_size:
+        description: 'Number of emails to process per run'
+        required: false
+        default: '5'
+      dry_run:
+        description: 'Test without sending (true/false)'
+        required: false
+        default: 'false'
+
+# Prevent concurrent runs - only one scheduler at a time
+concurrency:
+  group: email-scheduler
+  cancel-in-progress: false  # Don't cancel running jobs
+
+jobs:
+  send-emails:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5  # Hard timeout to prevent runaway jobs
+    
+    steps:
+      - name: Call Email Scheduler Endpoint
+        id: scheduler
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size || '5' }}
+        run: |
+          # Build the request body
+          BODY='{
+            "batchSize": '$BATCH_SIZE',
+            "sendingTimezone": "America/New_York",
+            "businessHoursStart": 9,
+            "businessHoursEnd": 18,
+            "enableWeekends": false,
+            "stuckThresholdMinutes": 10
+          }'
+          
+          echo "🚀 Calling email scheduler..."
+          echo "URL: $APP_URL/api/cron/send-emails"
+          echo "Batch size: $BATCH_SIZE"
+          
+          # Make the API call
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -d "$BODY" \
+            "$APP_URL/api/cron/send-emails")
+          
+          # Extract HTTP status code (last line)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          # Extract body (everything except last line)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          # Check for success
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Scheduler completed successfully"
+            
+            # Parse and display results
+            CLAIMED=$(echo "$BODY" | jq -r '.claimed // 0')
+            SENT_COUNT=$(echo "$BODY" | jq -r '.sent | length // 0')
+            SUCCESS_COUNT=$(echo "$BODY" | jq -r '[.sent[] | select(.success == true)] | length // 0')
+            SKIPPED=$(echo "$BODY" | jq -r '.skipped // "none"')
+            DURATION=$(echo "$BODY" | jq -r '.durationMs // 0')
+            
+            echo "📊 Results:"
+            echo "  - Claimed: $CLAIMED"
+            echo "  - Processed: $SENT_COUNT"
+            echo "  - Successful: $SUCCESS_COUNT"
+            echo "  - Skipped: $SKIPPED"
+            echo "  - Duration: ${DURATION}ms"
+            
+            # Save to outputs
+            echo "claimed=$CLAIMED" >> $GITHUB_OUTPUT
+            echo "sent=$SUCCESS_COUNT" >> $GITHUB_OUTPUT
+            echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+          elif [ "$HTTP_CODE" -eq 401 ]; then
+            echo "❌ Authentication failed - check CRON_SECRET"
+            exit 1
+          else
+            echo "❌ Scheduler failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Report Summary
+        if: always()
+        run: |
+          echo "## Email Scheduler Run" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Time | $(date -u) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Claimed | ${{ steps.scheduler.outputs.claimed || 'N/A' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Sent | ${{ steps.scheduler.outputs.sent || 'N/A' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skipped | ${{ steps.scheduler.outputs.skipped || 'N/A' }} |" >> $GITHUB_STEP_SUMMARY

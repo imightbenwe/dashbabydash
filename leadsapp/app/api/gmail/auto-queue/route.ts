@@ -334,6 +334,8 @@ async function generateEmailContent(lead: any, emailType: string): Promise<{ sub
 }
 
 // Helper: Calculate scheduled send time with delay
+// First calculates the NORMAL send time based on position/rate/schedule,
+// then ADDS the delay on top (the "fuse")
 function calculateScheduledTimeWithDelay(
   position: number, 
   delayMinutes: number,
@@ -343,8 +345,8 @@ function calculateScheduledTimeWithDelay(
 ): Date {
   const minutesBetweenEmails = 60 / perHour;
   
-  // Start from NOW + delay (this is the "fuse")
-  let currentTime = new Date(Date.now() + delayMinutes * 60 * 1000);
+  // Step 1: Calculate the NORMAL send time (from NOW, based on rate limits)
+  let currentTime = new Date();
   let emailsScheduled = 0;
 
   while (emailsScheduled <= position) {
@@ -363,7 +365,9 @@ function calculateScheduledTimeWithDelay(
 
     if (inSendingHours) {
       if (emailsScheduled === position) {
-        return currentTime;
+        // Step 2: ADD the delay to this calculated time
+        // e.g., if normal time is 8:14 PM and delay is 60 min → 9:14 PM
+        return new Date(currentTime.getTime() + delayMinutes * 60 * 1000);
       }
       emailsScheduled++;
     }
@@ -372,9 +376,9 @@ function calculateScheduledTimeWithDelay(
 
     // Safety break (max 48 hours out)
     if (currentTime.getTime() - Date.now() > 48 * 60 * 60 * 1000) {
-      return currentTime;
+      return new Date(currentTime.getTime() + delayMinutes * 60 * 1000);
     }
   }
 
-  return currentTime;
+  return new Date(currentTime.getTime() + delayMinutes * 60 * 1000);
 }

@@ -12,7 +12,6 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
 
   const supabase = createClient();
 
@@ -40,21 +39,11 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
     setError('');
 
     try {
-      if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (error) throw error;
-        setError('Check your email for confirmation link!');
-        setMode('login');
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
@@ -88,7 +77,7 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
             PersonaAI
           </h1>
           <p className="text-gray-400 text-center mb-6">
-            {mode === 'login' ? 'Sign in to continue' : 'Create your account'}
+            Admin access only
           </p>
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
@@ -99,7 +88,7 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="admin@example.com"
                   className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
@@ -114,13 +103,10 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
                 placeholder="••••••••"
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
-                minLength={6}
               />
             </div>
             {error && (
-              <p className={`text-sm mb-4 text-center ${error.includes('Check your email') ? 'text-green-500' : 'text-red-500'}`}>
-                {error}
-              </p>
+              <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
             )}
             <button
               type="submit"
@@ -128,20 +114,9 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {mode === 'login' ? 'Sign In' : 'Sign Up'}
+              Sign In
             </button>
           </form>
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => {
-                setMode(mode === 'login' ? 'signup' : 'login');
-                setError('');
-              }}
-              className="text-blue-500 hover:text-blue-400 text-sm"
-            >
-              {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -150,13 +125,12 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
   // User is authenticated - render children with logout option available
   return (
     <div className="relative">
-      {/* Logout button in top-right corner */}
       <div className="fixed top-4 right-4 z-50">
         <button
           onClick={handleLogout}
           className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg border border-gray-700 transition-colors"
         >
-          Logout ({user.email})
+          Logout
         </button>
       </div>
       {children}

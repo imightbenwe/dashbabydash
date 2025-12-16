@@ -1,69 +1,70 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Mail, User, Building, AlertTriangle, Check, X, ChevronDown, ChevronUp, RefreshCw, Trash2, Clock, XCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  Mail, Clock, AlertTriangle, Check, X, RefreshCw, 
+  Trash2, XCircle, Play, Pause, Timer, Eye, Settings
+} from 'lucide-react';
 import Link from 'next/link';
-import emailTemplates from '@/lib/email-templates.json';
 
-interface PreviewItem {
-  leadId: string;
-  leadName: string;
-  email: string;
-  company: string | null;
-  emailType: 'initial' | 'followup_1' | 'followup_2' | 'followup_3';
-  reason: string;
-}
-
-interface AttentionItem extends PreviewItem {
-  issues: string[];
-  queueId?: string;
-  isFailed?: boolean;
+interface QueueItem {
+  id: string;
+  lead_id: string;
+  email_type: string;
+  to_email: string;
+  subject: string;
+  body: string;
+  scheduled_for: string;
+  status: string;
+  minutesRemaining: number;
+  isOverdue: boolean;
+  leads?: {
+    id: string;
+    name: string;
+    email: string;
+    company: string | null;
+    status: string;
+  };
 }
 
 interface FailedItem {
   id: string;
   lead_id: string;
-  leadName: string;
-  email: string;
-  company: string | null;
   email_type: string;
+  to_email: string;
   subject: string;
   error_message: string;
   retry_count: number;
-  next_retry_at: string | null;
-  scheduled_for: string;
+  leads?: {
+    name: string;
+    company: string | null;
+  };
 }
 
-interface EmailPreview {
-  to: string;
-  subject: string;
-  body: string;
-  leadId: string;
-  leadName: string;
-  emailType: string;
-}
-
-type TabType = 'approved' | 'pending' | 'failed';
+type TabType = 'countdown' | 'failed';
 
 export default function WaitingRoomPage() {
-  const [activeTab, setActiveTab] = useState<TabType>('pending');
-  const [previewQueue, setPreviewQueue] = useState<PreviewItem[]>([]);
-  const [requiresAttention, setRequiresAttention] = useState<AttentionItem[]>([]);
-  const [approvedQueue, setApprovedQueue] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<TabType>('countdown');
+  const [queue, setQueue] = useState<QueueItem[]>([]);
   const [failedQueue, setFailedQueue] = useState<FailedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [emailPreviews, setEmailPreviews] = useState<Map<string, EmailPreview>>(new Map());
-  const [approving, setApproving] = useState<Set<string>>(new Set());
-  const [retrying, setRetrying] = useState<Set<string>>(new Set());
+  const [isAutoQueueing, setIsAutoQueueing] = useState(false);
   const [message, setMessage] = useState('');
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [retrying, setRetrying] = useState<Set<string>>(new Set());
 
-  // Settings from localStorage
+  // Settings
+  const [delayMinutes, setDelayMinutes] = useState(60);
   const [emailsPerHour, setEmailsPerHour] = useState(10);
   const [sendingSchedule, setSendingSchedule] = useState('business');
   const [sendingTimezone, setSendingTimezone] = useState('America/New_York');
+  const [showSettings, setShowSettings] = useState(false);
 
+  // Load settings from localStorage
   useEffect(() => {
+    const savedDelay = localStorage.getItem('gmail_delay_minutes');
+    if (savedDelay) setDelayMinutes(parseInt(savedDelay, 10));
+    
     const savedEmailsPerHour = localStorage.getItem('gmail_emails_per_hour');
     if (savedEmailsPerHour) setEmailsPerHour(parseInt(savedEmailsPerHour, 10));
     
@@ -74,166 +75,76 @@ export default function WaitingRoomPage() {
     if (savedTimezone) setSendingTimezone(savedTimezone);
   }, []);
 
-  // Fetch preview queue (what COULD be sent)
-  const fetchPreviewQueue = async () => {
-    try {
-      const response = await fetch('/api/gmail/approve-queue');
-      if (response.ok) {
-        const data = await response.json();
-        setPreviewQueue(data.preview || []);
-        setRequiresAttention(data.requiresAttention || []);
-      }
-    } catch (error) {
-      console.error('Error fetching preview:', error);
-    }
+  // Save delay setting when changed
+  const handleDelayChange = (minutes: number) => {
+    setDelayMinutes(minutes);
+    localStorage.setItem('gmail_delay_minutes', minutes.toString());
   };
 
-  // Fetch approved queue (what's waiting to send)
-  const fetchApprovedQueue = async () => {
+  // Fetch current queue with countdown
+  const fetchQueue = useCallback(async () => {
     try {
-      const response = await fetch('/api/gmail/process-queue');
+      const response = await fetch('/api/gmail/auto-queue');
       if (response.ok) {
         const data = await response.json();
-        setApprovedQueue(data.queue || []);
+        setQueue(data.queue || []);
       }
     } catch (error) {
-      console.error('Error fetching approved:', error);
+      console.error('Error fetching queue:', error);
     }
-  };
+  }, []);
 
   // Fetch failed emails
-  const fetchFailedQueue = async () => {
+  const fetchFailedQueue = useCallback(async () => {
     try {
       const response = await fetch('/api/gmail/process-queue?status=failed');
       if (response.ok) {
         const data = await response.json();
-        // Filter failed items from the queue response or use separate endpoint
         const failed = (data.queue || []).filter((q: any) => q.status === 'failed');
         setFailedQueue(failed.map((f: any) => ({
           id: f.id,
           lead_id: f.lead_id,
-          leadName: f.leads?.name || 'Unknown',
-          email: f.to_email,
-          company: f.leads?.company,
           email_type: f.email_type,
+          to_email: f.to_email,
           subject: f.subject,
           error_message: f.error_message || 'Unknown error',
           retry_count: f.retry_count || 0,
-          next_retry_at: f.next_retry_at,
-          scheduled_for: f.scheduled_for,
+          leads: f.leads,
         })));
       }
     } catch (error) {
       console.error('Error fetching failed:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      await Promise.all([fetchPreviewQueue(), fetchApprovedQueue(), fetchFailedQueue()]);
+      await Promise.all([fetchQueue(), fetchFailedQueue()]);
       setIsLoading(false);
     };
     loadData();
 
+    // Refresh every 10 seconds to update countdowns
     const interval = setInterval(() => {
-      fetchPreviewQueue();
-      fetchApprovedQueue();
+      fetchQueue();
       fetchFailedQueue();
-    }, 30000);
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchQueue, fetchFailedQueue]);
 
-  // Generate email preview for an item
-  const generateEmailPreview = async (item: PreviewItem): Promise<EmailPreview> => {
-    // Fetch lead details INCLUDING generated emails
-    const response = await fetch(`/api/leads/${item.leadId}`);
-    const leadData = response.ok ? await response.json() : null;
-    const lead = leadData?.lead || { name: item.leadName, initial_email_subject: null };
-    const emails = leadData?.emails || [];
-
-    const firstName = item.leadName.split(' ')[0];
-    const originalSubject = lead.initial_email_subject || 'Quick note after seeing your work';
-
-    let subject = '';
-    let body = '';
-
-    if (item.emailType === 'initial') {
-      // For initial email, use the GENERATED email from AI analysis (has emailOpening replaced)
-      const generatedInitial = emails.find((e: any) => e.email_type === 'initial');
-      if (generatedInitial) {
-        subject = generatedInitial.subject;
-        body = generatedInitial.body;
-      } else {
-        // Fallback to template (will show {emailOpening} placeholder - not ideal)
-        const template = (emailTemplates as any).initial;
-        subject = template.subject;
-        body = template.body.replace(/{firstName}/g, firstName);
-      }
-    } else {
-      // For follow-ups, use the template (no emailOpening needed)
-      const templateKey = `auto_${item.emailType}` as keyof typeof emailTemplates;
-      const template = (emailTemplates as any)[templateKey];
-      
-      if (!template) {
-        console.error(`Template not found for: auto_${item.emailType}`);
-        return {
-          to: item.email,
-          subject: 'ERROR: Template not found',
-          body: `Could not find template for ${item.emailType}`,
-          leadId: item.leadId,
-          leadName: item.leadName,
-          emailType: item.emailType,
-        };
-      }
-      
-      subject = template.subject === 'RE:' ? `Re: ${originalSubject}` : template.subject;
-      body = template.body
-        .replace(/{firstName}/g, firstName)
-        .replace(/{originalSubject}/g, originalSubject);
-    }
-
-    return {
-      to: item.email,
-      subject,
-      body,
-      leadId: item.leadId,
-      leadName: item.leadName,
-      emailType: item.emailType,
-    };
-  };
-
-  // Toggle expanded view for an item
-  const toggleExpand = async (item: PreviewItem) => {
-    const key = `${item.leadId}:${item.emailType}`;
-    const newExpanded = new Set(expandedItems);
-
-    if (expandedItems.has(key)) {
-      newExpanded.delete(key);
-    } else {
-      newExpanded.add(key);
-      // Generate preview if not already done
-      if (!emailPreviews.has(key)) {
-        const preview = await generateEmailPreview(item);
-        setEmailPreviews(new Map(emailPreviews.set(key, preview)));
-      }
-    }
-
-    setExpandedItems(newExpanded);
-  };
-
-  // Approve a single item
-  const handleApprove = async (item: PreviewItem) => {
-    const key = `${item.leadId}:${item.emailType}`;
-    setApproving(new Set(approving.add(key)));
+  // Auto-queue all ready emails with the configured delay
+  const handleAutoQueue = async () => {
+    setIsAutoQueueing(true);
+    setMessage('');
 
     try {
-      const response = await fetch('/api/gmail/approve-queue', {
+      const response = await fetch('/api/gmail/auto-queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: [{ leadId: item.leadId, emailType: item.emailType }],
+          delayMinutes,
           emailsPerHour,
           sendingSchedule,
           sendingTimezone,
@@ -242,24 +153,25 @@ export default function WaitingRoomPage() {
 
       const result = await response.json();
 
-      if (result.success && result.totalApproved > 0) {
-        setMessage(`✅ Approved: ${item.leadName} - ${getEmailTypeName(item.emailType)}`);
-        fetchPreviewQueue();
-        fetchApprovedQueue();
-      } else if (result.skipped?.length > 0) {
-        setMessage(`⚠️ Skipped: ${result.skipped[0].reason}`);
+      if (result.success) {
+        if (result.total > 0) {
+          setMessage(`🔥 ${result.total} emails queued! They will send in ${delayMinutes} minutes (review below to cancel any)`);
+        } else {
+          setMessage(`✓ No new emails to queue. All leads are up to date.`);
+        }
+        fetchQueue();
+      } else {
+        setMessage(`❌ Error: ${result.error}`);
       }
     } catch (error) {
       setMessage(`❌ Error: ${error}`);
     } finally {
-      const newApproving = new Set(approving);
-      newApproving.delete(key);
-      setApproving(newApproving);
+      setIsAutoQueueing(false);
     }
   };
 
-  // Remove from approved queue
-  const handleRemoveApproved = async (queueId: string) => {
+  // Cancel/remove from queue
+  const handleCancel = async (queueId: string) => {
     try {
       const response = await fetch('/api/gmail/approve-queue', {
         method: 'DELETE',
@@ -268,28 +180,29 @@ export default function WaitingRoomPage() {
       });
 
       if (response.ok) {
-        setMessage('✅ Removed from queue');
-        fetchApprovedQueue();
-        fetchPreviewQueue();
+        setMessage('✅ Email cancelled - will not send');
+        fetchQueue();
       }
     } catch (error) {
       setMessage(`❌ Error: ${error}`);
     }
   };
 
-  // Dismiss failed item (remove from attention queue)
-  const handleDismissFailed = async (queueId: string) => {
+  // Cancel all queued emails
+  const handleCancelAll = async () => {
+    if (!confirm(`Are you sure you want to cancel all ${queue.length} queued emails?`)) return;
+
+    const queueIds = queue.map(q => q.id);
     try {
       const response = await fetch('/api/gmail/approve-queue', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ queueIds: [queueId] }),
+        body: JSON.stringify({ queueIds }),
       });
 
       if (response.ok) {
-        setMessage('✅ Dismissed failed email');
-        fetchPreviewQueue();
-        fetchFailedQueue();
+        setMessage(`✅ Cancelled ${queueIds.length} emails`);
+        fetchQueue();
       }
     } catch (error) {
       setMessage(`❌ Error: ${error}`);
@@ -312,14 +225,10 @@ export default function WaitingRoomPage() {
         }),
       });
 
-      const result = await response.json();
-
-      if (result.success && result.totalRetried > 0) {
+      if (response.ok) {
         setMessage('✅ Email scheduled for retry');
-        fetchApprovedQueue();
+        fetchQueue();
         fetchFailedQueue();
-      } else {
-        setMessage('⚠️ Could not retry email');
       }
     } catch (error) {
       setMessage(`❌ Error: ${error}`);
@@ -330,34 +239,32 @@ export default function WaitingRoomPage() {
     }
   };
 
-  // Retry all failed emails
-  const handleRetryAllFailed = async () => {
-    if (failedQueue.length === 0) return;
-    
-    const queueIds = failedQueue.map(f => f.id);
-    
+  // Dismiss failed email
+  const handleDismissFailed = async (queueId: string) => {
     try {
       const response = await fetch('/api/gmail/approve-queue', {
-        method: 'PATCH',
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          queueIds,
-          emailsPerHour,
-          sendingSchedule,
-          sendingTimezone,
-        }),
+        body: JSON.stringify({ queueIds: [queueId] }),
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        setMessage(`✅ Retried ${result.totalRetried} email(s)`);
-        fetchApprovedQueue();
+      if (response.ok) {
+        setMessage('✅ Dismissed failed email');
         fetchFailedQueue();
       }
     } catch (error) {
       setMessage(`❌ Error: ${error}`);
     }
+  };
+
+  const toggleExpand = (id: string) => {
+    const newExpanded = new Set(expandedItems);
+    if (expandedItems.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedItems(newExpanded);
   };
 
   const getEmailTypeName = (type: string) => {
@@ -380,6 +287,21 @@ export default function WaitingRoomPage() {
     }
   };
 
+  const formatTimeRemaining = (minutes: number) => {
+    if (minutes <= 0) return 'Sending now...';
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  };
+
+  const getCountdownColor = (minutes: number) => {
+    if (minutes <= 0) return 'text-red-600 bg-red-50';
+    if (minutes <= 10) return 'text-orange-600 bg-orange-50';
+    if (minutes <= 30) return 'text-amber-600 bg-amber-50';
+    return 'text-emerald-600 bg-emerald-50';
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -393,8 +315,10 @@ export default function WaitingRoomPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Email Waiting Room</h1>
-          <p className="text-slate-600 mt-1">Review exact email content before approving for send</p>
+          <h1 className="text-3xl font-bold text-slate-900">⏱️ Email Waiting Room</h1>
+          <p className="text-slate-600 mt-1">
+            Inspection area — emails auto-send after the delay countdown
+          </p>
         </div>
         <Link 
           href="/" 
@@ -404,9 +328,125 @@ export default function WaitingRoomPage() {
         </Link>
       </div>
 
+      {/* Main Action: Auto-Queue with Delay */}
+      <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+              <Timer className="w-8 h-8" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Delayed Fuse Automation</h2>
+              <p className="text-orange-100">
+                Queue all ready emails with a {delayMinutes}-minute delay. 
+                Cancel any before countdown ends.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-3 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleAutoQueue}
+              disabled={isAutoQueueing}
+              className="px-6 py-3 bg-white text-orange-600 rounded-xl font-bold hover:bg-orange-50 disabled:opacity-50 flex items-center gap-2"
+            >
+              {isAutoQueueing ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
+                  Queueing...
+                </>
+              ) : (
+                <>
+                  <Play className="w-5 h-5" />
+                  Queue All Ready Emails
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="mt-4 pt-4 border-t border-white/20 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm text-orange-100 mb-1">Delay (minutes)</label>
+              <select
+                value={delayMinutes}
+                onChange={(e) => handleDelayChange(parseInt(e.target.value))}
+                className="w-full px-3 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+              >
+                <option value={15} className="text-slate-900">15 minutes</option>
+                <option value={30} className="text-slate-900">30 minutes</option>
+                <option value={60} className="text-slate-900">60 minutes (default)</option>
+                <option value={120} className="text-slate-900">2 hours</option>
+                <option value={240} className="text-slate-900">4 hours</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-orange-100 mb-1">Rate Limit</label>
+              <select
+                value={emailsPerHour}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setEmailsPerHour(val);
+                  localStorage.setItem('gmail_emails_per_hour', val.toString());
+                }}
+                className="w-full px-3 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+              >
+                <option value={5} className="text-slate-900">5 per hour</option>
+                <option value={10} className="text-slate-900">10 per hour</option>
+                <option value={15} className="text-slate-900">15 per hour</option>
+                <option value={20} className="text-slate-900">20 per hour</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-orange-100 mb-1">Schedule</label>
+              <select
+                value={sendingSchedule}
+                onChange={(e) => {
+                  setSendingSchedule(e.target.value);
+                  localStorage.setItem('gmail_sending_schedule', e.target.value);
+                }}
+                className="w-full px-3 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+              >
+                <option value="business" className="text-slate-900">Business (9am-6pm)</option>
+                <option value="extended" className="text-slate-900">Extended (7am-9pm)</option>
+                <option value="around_clock" className="text-slate-900">24/7</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-orange-100 mb-1">Timezone</label>
+              <select
+                value={sendingTimezone}
+                onChange={(e) => {
+                  setSendingTimezone(e.target.value);
+                  localStorage.setItem('gmail_sending_timezone', e.target.value);
+                }}
+                className="w-full px-3 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+              >
+                <option value="America/New_York" className="text-slate-900">Eastern</option>
+                <option value="America/Chicago" className="text-slate-900">Central</option>
+                <option value="America/Denver" className="text-slate-900">Mountain</option>
+                <option value="America/Los_Angeles" className="text-slate-900">Pacific</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Message */}
       {message && (
-        <div className="bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-sm">
+        <div className={`rounded-lg px-4 py-3 text-sm ${
+          message.includes('❌') ? 'bg-red-50 border border-red-200 text-red-700' :
+          message.includes('🔥') ? 'bg-orange-50 border border-orange-200 text-orange-700' :
+          'bg-slate-100 border border-slate-200 text-slate-700'
+        }`}>
           {message}
         </div>
       )}
@@ -414,29 +454,16 @@ export default function WaitingRoomPage() {
       {/* Tab Navigation */}
       <div className="flex border-b border-slate-200">
         <button
-          onClick={() => setActiveTab('approved')}
+          onClick={() => setActiveTab('countdown')}
           className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'approved'
-              ? 'border-emerald-500 text-emerald-600'
+            activeTab === 'countdown'
+              ? 'border-orange-500 text-orange-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
           <span className="flex items-center gap-2">
-            <Check className="w-4 h-4" />
-            Approved ({approvedQueue.length})
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('pending')}
-          className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === 'pending'
-              ? 'border-amber-500 text-amber-600'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            Pending Review ({previewQueue.length})
+            <Timer className="w-4 h-4" />
+            Countdown Queue ({queue.length})
           </span>
         </button>
         <button
@@ -454,237 +481,151 @@ export default function WaitingRoomPage() {
         </button>
       </div>
 
-      {/* Approved Queue Tab */}
-      {activeTab === 'approved' && (
+      {/* Countdown Queue Tab */}
+      {activeTab === 'countdown' && (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="bg-emerald-600 text-white px-6 py-4">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <Check className="w-5 h-5" />
-              Approved & Scheduled ({approvedQueue.length})
-            </h2>
-            <p className="text-emerald-100 text-sm">These emails will send at their scheduled times</p>
+          <div className="bg-gradient-to-r from-orange-600 to-amber-500 text-white px-6 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Timer className="w-5 h-5" />
+                Emails in Countdown ({queue.length})
+              </h2>
+              <p className="text-orange-100 text-sm">
+                These emails will auto-send when their countdown reaches zero
+              </p>
+            </div>
+            {queue.length > 0 && (
+              <button
+                onClick={handleCancelAll}
+                className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 font-medium text-sm flex items-center gap-2"
+              >
+                <Pause className="w-4 h-4" />
+                Cancel All
+              </button>
+            )}
           </div>
-          {approvedQueue.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">
-              <Mail className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-              <p>No emails scheduled for sending</p>
+          
+          {queue.length === 0 ? (
+            <div className="p-12 text-center text-slate-500">
+              <Timer className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+              <p className="text-lg font-medium">No emails in queue</p>
+              <p className="text-sm mt-1">
+                Click &quot;Queue All Ready Emails&quot; above to start the countdown
+              </p>
             </div>
           ) : (
-            <div className="divide-y divide-emerald-100">
-              {approvedQueue.map((item) => (
-                <div key={item.id} className="p-4 bg-white">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`px-2 py-1 rounded text-xs font-medium ${getEmailTypeColor(item.email_type)}`}>
-                        {getEmailTypeName(item.email_type)}
-                      </div>
-                      <div>
-                        <div className="font-medium text-slate-900">{item.leads?.name}</div>
-                        <div className="text-sm text-slate-500">{item.to_email}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-slate-700">
-                          {new Date(item.scheduled_for).toLocaleString('en-US', {
-                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-                          })}
+            <div className="divide-y divide-slate-100">
+              {queue.map((item) => {
+                const isExpanded = expandedItems.has(item.id);
+                
+                return (
+                  <div key={item.id} className="bg-white">
+                    {/* Row */}
+                    <div className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        {/* Countdown Badge */}
+                        <div className={`px-3 py-2 rounded-lg font-mono font-bold text-lg min-w-[80px] text-center ${getCountdownColor(item.minutesRemaining)}`}>
+                          {formatTimeRemaining(item.minutesRemaining)}
                         </div>
-                        <div className="text-xs text-slate-500">Scheduled</div>
+                        
+                        {/* Email Type */}
+                        <div className={`px-2 py-1 rounded text-xs font-medium border ${getEmailTypeColor(item.email_type)}`}>
+                          {getEmailTypeName(item.email_type)}
+                        </div>
+                        
+                        {/* Lead Info */}
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-900">{item.leads?.name || 'Unknown'}</div>
+                          <div className="text-sm text-slate-500">{item.to_email}</div>
+                        </div>
+                        
+                        {/* Scheduled Time */}
+                        <div className="text-right text-sm">
+                          <div className="text-slate-600">
+                            Sends at {new Date(item.scheduled_for).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </div>
+                          <div className="text-slate-400 text-xs">
+                            {new Date(item.scheduled_for).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </div>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleRemoveApproved(item.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded"
-                        title="Remove from queue"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                      
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={() => toggleExpand(item.id)}
+                          className="p-2 text-slate-500 hover:bg-slate-100 rounded"
+                          title="Preview email"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleCancel(item.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded"
+                          title="Cancel - will not send"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
+                    
+                    {/* Expanded Preview */}
+                    {isExpanded && (
+                      <div className="px-4 pb-4 bg-slate-50 border-t border-slate-100">
+                        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden mt-3">
+                          <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
+                            <h4 className="font-semibold text-slate-700 text-sm">📧 Email Preview</h4>
+                          </div>
+                          <div className="p-4 space-y-2 text-sm">
+                            <div>
+                              <span className="text-slate-500">To:</span>{' '}
+                              <span className="text-slate-900">{item.to_email}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Subject:</span>{' '}
+                              <span className="text-slate-900 font-medium">{item.subject}</span>
+                            </div>
+                            <div className="border-t border-slate-200 pt-2 mt-2">
+                              <span className="text-slate-500">Body:</span>
+                              <pre className="mt-2 text-slate-700 whitespace-pre-wrap bg-slate-50 p-3 rounded border border-slate-200 text-sm font-sans">
+                                {item.body}
+                              </pre>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between">
+                          <Link 
+                            href={`/lead/${item.lead_id}`}
+                            className="text-sm text-indigo-600 hover:underline"
+                          >
+                            View Lead Details →
+                          </Link>
+                          <button
+                            onClick={() => handleCancel(item.id)}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                          >
+                            <X className="w-4 h-4" />
+                            Cancel Send
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-3 bg-slate-50 rounded-lg p-3 text-sm">
-                    <div className="text-slate-500 mb-1">Subject: <span className="text-slate-900 font-medium">{item.subject}</span></div>
-                    <div className="text-slate-700 whitespace-pre-wrap max-h-32 overflow-y-auto">{item.body}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* Pending Review Queue Tab */}
-      {activeTab === 'pending' && (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="bg-amber-500 text-white px-6 py-4">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" />
-              Pending Review ({previewQueue.length})
-            </h2>
-            <p className="text-amber-100 text-sm">Click to expand and see exact email content before approving</p>
-          </div>
-
-        {previewQueue.length === 0 ? (
-          <div className="p-8 text-center text-slate-500">
-            <Mail className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-            <p>No emails pending review</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {previewQueue.map((item) => {
-              const key = `${item.leadId}:${item.emailType}`;
-              const isExpanded = expandedItems.has(key);
-              const preview = emailPreviews.get(key);
-              const isApproving = approving.has(key);
-
-              return (
-                <div key={key} className="bg-white">
-                  {/* Collapsed Row */}
-                  <div 
-                    className="p-4 cursor-pointer hover:bg-slate-50 flex items-center justify-between"
-                    onClick={() => toggleExpand(item)}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`px-2 py-1 rounded text-xs font-medium border ${getEmailTypeColor(item.emailType)}`}>
-                        {getEmailTypeName(item.emailType)}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-slate-400" />
-                        <span className="font-medium text-slate-900">{item.leadName}</span>
-                      </div>
-                      {item.company && (
-                        <div className="flex items-center gap-2 text-slate-500">
-                          <Building className="w-4 h-4" />
-                          <span>{item.company}</span>
-                        </div>
-                      )}
-                      <span className="text-sm text-slate-400">{item.email}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-slate-500">{item.reason}</span>
-                      <button className="p-1 text-slate-400">
-                        {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Expanded Content */}
-                  {isExpanded && (
-                    <div className="px-4 pb-4 bg-slate-50 border-t border-slate-100">
-                      {preview ? (
-                        <div className="space-y-4">
-                          {/* Raw Email Data */}
-                          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                            <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
-                              <h4 className="font-semibold text-slate-700 text-sm">📧 EXACT EMAIL TO BE SENT</h4>
-                            </div>
-                            <div className="p-4 space-y-3 font-mono text-sm">
-                              <div>
-                                <span className="text-slate-500">To:</span>{' '}
-                                <span className="text-slate-900 font-medium">{preview.to}</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-500">Subject:</span>{' '}
-                                <span className="text-slate-900 font-medium">{preview.subject}</span>
-                              </div>
-                              <div className="border-t border-slate-200 pt-3">
-                                <span className="text-slate-500">Body:</span>
-                                <pre className="mt-2 text-slate-900 whitespace-pre-wrap bg-slate-50 p-3 rounded border border-slate-200">
-                                  {preview.body}
-                                </pre>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex items-center justify-between">
-                            <Link 
-                              href={`/lead/${item.leadId}`}
-                              className="text-sm text-indigo-600 hover:underline"
-                            >
-                              View Lead Details →
-                            </Link>
-                            <div className="flex gap-3">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleExpand(item);
-                                }}
-                                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleApprove(item);
-                                }}
-                                disabled={isApproving}
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
-                              >
-                                {isApproving ? (
-                                  <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Approving...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Check className="w-4 h-4" />
-                                    Approve & Schedule
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="py-4 text-center">
-                          <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto" />
-                          <p className="text-sm text-slate-500 mt-2">Loading email preview...</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Skipped items within pending tab */}
-        {requiresAttention.filter(a => !a.isFailed).length > 0 && (
-          <details className="border-t border-slate-200">
-            <summary className="bg-slate-100 text-slate-700 px-6 py-3 cursor-pointer hover:bg-slate-200 flex items-center justify-between">
-              <span className="font-medium text-sm">
-                ⚠️ Skipped ({requiresAttention.filter(a => !a.isFailed).length}) — missing data
-              </span>
-            </summary>
-            <div className="divide-y divide-slate-200">
-              {requiresAttention.filter(a => !a.isFailed).map((item) => {
-                const key = `skipped:${item.leadId}:${item.emailType}`;
-                return (
-                  <div key={key} className="p-3 bg-white flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-3">
-                      <div className={`px-2 py-0.5 rounded text-xs font-medium border ${getEmailTypeColor(item.emailType)}`}>
-                        {getEmailTypeName(item.emailType)}
-                      </div>
-                      <span className="font-medium text-slate-700">{item.leadName}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-slate-500 text-xs">{item.issues.join(', ')}</span>
-                      <Link href={`/lead/${item.leadId}`} className="text-xs text-blue-600 hover:underline">
-                        Fix →
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </details>
-        )}
-        </div>
-      )}
-
-      {/* Failed Queue Tab */}
+      {/* Failed Tab */}
       {activeTab === 'failed' && (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
@@ -695,16 +636,8 @@ export default function WaitingRoomPage() {
               </h2>
               <p className="text-red-100 text-sm">These emails failed to send. Retry or dismiss them.</p>
             </div>
-            {failedQueue.length > 0 && (
-              <button
-                onClick={handleRetryAllFailed}
-                className="px-4 py-2 bg-white text-red-600 rounded-lg hover:bg-red-50 font-medium text-sm flex items-center gap-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Retry All
-              </button>
-            )}
           </div>
+          
           {failedQueue.length === 0 ? (
             <div className="p-8 text-center text-slate-500">
               <Check className="w-12 h-12 mx-auto mb-3 text-emerald-300" />
@@ -720,20 +653,13 @@ export default function WaitingRoomPage() {
                         {getEmailTypeName(item.email_type)}
                       </div>
                       <div>
-                        <div className="font-medium text-slate-900">{item.leadName}</div>
-                        <div className="text-sm text-slate-500">{item.email}</div>
+                        <div className="font-medium text-slate-900">{item.leads?.name || 'Unknown'}</div>
+                        <div className="text-sm text-slate-500">{item.to_email}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="text-sm text-red-600 font-medium">
-                          {item.retry_count > 0 ? `${item.retry_count} retries` : 'First attempt'}
-                        </div>
-                        {item.next_retry_at && (
-                          <div className="text-xs text-slate-500">
-                            Auto-retry: {new Date(item.next_retry_at).toLocaleTimeString()}
-                          </div>
-                        )}
+                      <div className="text-sm text-red-600 font-medium">
+                        {item.retry_count > 0 ? `${item.retry_count} retries` : 'First attempt'}
                       </div>
                       <button
                         onClick={() => handleRetryFailed(item.id)}
@@ -750,32 +676,56 @@ export default function WaitingRoomPage() {
                       <button
                         onClick={() => handleDismissFailed(item.id)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded"
-                        title="Dismiss (won't retry)"
+                        title="Dismiss"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
-                  {/* Error message */}
                   <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
                     <div className="text-red-700 font-medium mb-1">Error:</div>
                     <div className="text-red-600">{item.error_message}</div>
                   </div>
-                  {/* Email preview */}
-                  <details className="mt-2">
-                    <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">
-                      View email content
-                    </summary>
-                    <div className="mt-2 bg-slate-50 rounded-lg p-3 text-sm">
-                      <div className="text-slate-500 mb-1">Subject: <span className="text-slate-900 font-medium">{item.subject}</span></div>
-                    </div>
-                  </details>
                 </div>
               ))}
             </div>
           )}
         </div>
       )}
+
+      {/* How it works */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+        <h3 className="font-bold text-slate-900 mb-3">ℹ️ How the Waiting Room Works</h3>
+        <div className="grid md:grid-cols-3 gap-4 text-sm text-slate-600">
+          <div className="flex gap-3">
+            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-orange-600 font-bold">1</span>
+            </div>
+            <div>
+              <div className="font-medium text-slate-900">Queue with Delay</div>
+              <div>Click &quot;Queue All Ready&quot; to add emails with a {delayMinutes}-minute countdown</div>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-orange-600 font-bold">2</span>
+            </div>
+            <div>
+              <div className="font-medium text-slate-900">Inspect & Review</div>
+              <div>Preview each email. Cancel any that look wrong before the countdown ends</div>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-orange-600 font-bold">3</span>
+            </div>
+            <div>
+              <div className="font-medium text-slate-900">Auto-Send</div>
+              <div>When countdown hits zero, the cron job sends the email automatically</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

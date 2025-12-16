@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { sendEmail } from '@/lib/gmail-sender';
+import { verifyCronSecret, unauthorizedCronResponse } from '@/lib/cron-security';
 
 /**
  * POST /api/gmail/process-queue
@@ -14,6 +16,9 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
  * 4. Updates status to 'sent' after sending
  * 
  * NOTHING sends without explicit approval in the queue first.
+ * 
+ * SECURITY: Requires CRON_SECRET for production automated calls.
+ * User-initiated calls (with userEmail in body) are allowed without secret.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -25,6 +30,15 @@ export async function POST(request: NextRequest) {
       testMode = true,
       userEmail,
     } = body;
+
+    // Allow user-initiated calls (from UI) without CRON_SECRET
+    // But require CRON_SECRET for automated/cron calls (no userEmail provided initially)
+    const isAutomatedCall = request.headers.get('x-cron-secret') || 
+                           request.headers.get('authorization')?.startsWith('Bearer ');
+    
+    if (isAutomatedCall && !verifyCronSecret(request)) {
+      return NextResponse.json(unauthorizedCronResponse(), { status: 401 });
+    }
 
     console.log('🔄 Process Approved Queue:', { testMode, userEmail: userEmail ? '✓' : '✗' });
 
@@ -133,28 +147,21 @@ export async function POST(request: NextRequest) {
       const lead = queueItem.leads;
 
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        const response = await fetch(`${baseUrl}/api/gmail/send-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-email': userEmail,
-          },
-          body: JSON.stringify({
-            leadId: queueItem.lead_id,
-            to: queueItem.to_email,
-            subject: queueItem.subject,
-            body: queueItem.body,
-            followupNumber: queueItem.email_type === 'initial' ? undefined : 
-              parseInt(queueItem.email_type.split('_')[1] || '1', 10),
-            threadId: lead?.gmail_thread_id,
-            messageId: lead?.gmail_message_id,
-          }),
+        // Call shared gmail-sender directly (no HTTP fetch)
+        const result = await sendEmail({
+          leadId: queueItem.lead_id,
+          to: queueItem.to_email,
+          subject: queueItem.subject,
+          body: queueItem.body,
+          followupNumber: queueItem.email_type === 'initial' ? undefined : 
+            parseInt(queueItem.email_type.split('_')[1] || '1', 10),
+          threadId: lead?.gmail_thread_id,
+          messageId: lead?.gmail_message_id,
+          userEmail,
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Send failed');
+        if (!result.success) {
+          throw new Error(result.error || 'Send failed');
         }
 
         await supabaseAdmin
@@ -225,29 +232,21 @@ export async function POST(request: NextRequest) {
     const lead = leadData;
 
     try {
-      // Call send-email API
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const response = await fetch(`${baseUrl}/api/gmail/send-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-email': userEmail,
-        },
-        body: JSON.stringify({
-          leadId: queueItem.lead_id,
-          to: queueItem.to_email,
-          subject: queueItem.subject,
-          body: queueItem.body,
-          followupNumber: queueItem.email_type === 'initial' ? undefined : 
-            parseInt(queueItem.email_type.split('_')[1] || '1', 10),
-          threadId: lead?.gmail_thread_id,
-          messageId: lead?.gmail_message_id,
-        }),
+      // Call shared gmail-sender directly (no HTTP fetch)
+      const result = await sendEmail({
+        leadId: queueItem.lead_id,
+        to: queueItem.to_email,
+        subject: queueItem.subject,
+        body: queueItem.body,
+        followupNumber: queueItem.email_type === 'initial' ? undefined : 
+          parseInt(queueItem.email_type.split('_')[1] || '1', 10),
+        threadId: lead?.gmail_thread_id,
+        messageId: lead?.gmail_message_id,
+        userEmail,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Send failed');
+      if (!result.success) {
+        throw new Error(result.error || 'Send failed');
       }
 
       // Mark as sent

@@ -9,15 +9,16 @@
 *Goal: Stop the bleeding. Fix security holes, remove fragile code, and prepare shared logic.*
 
 ### 1.1. Extract Shared Logic (Stop Self-Fetching)
-- [ ] Create `lib/gmail-sender.ts`: Move email sending logic out of API routes.
-- [ ] Create `lib/analysis-service.ts`: Move lead analysis logic out of API routes.
-- [ ] Refactor existing API routes to call these functions directly instead of `fetch()`.
+- [x] Create `lib/gmail-sender.ts`: Move email sending logic out of API routes.
+- [x] Create `lib/analysis-service.ts`: Move lead analysis logic out of API routes.
+- [x] Refactor existing API routes to call these functions directly instead of `fetch()`.
 
 ### 1.2. Fix "Stop on Reply" Gap
-- [ ] Update `gmail-sync-service.ts`: When a reply is detected, find and cancel any pending/approved emails for that lead in `email_send_queue`.
+- [x] Update `gmail-sync-service.ts`: When a reply is detected, find and cancel any pending/approved emails for that lead in `email_send_queue`.
 
 ### 1.3. Secure Endpoints
-- [ ] Add `CRON_SECRET` verification to any endpoint intended for automation.
+- [x] Add `CRON_SECRET` verification to any endpoint intended for automation.
+- [x] Create `lib/cron-security.ts` with verification utilities.
 - [ ] Ensure user-facing endpoints check for valid session/auth.
 
 ---

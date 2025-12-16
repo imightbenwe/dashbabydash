@@ -9,6 +9,7 @@ import { gmailOAuthService } from './gmail-oauth-service';
 import { GMAIL_CONFIG } from './gmail-config';
 import emailTemplates from './email-templates.json';
 import { logLeadActivity, formatStatusChange } from './activity-logger';
+import { cancelPendingEmailsForLead } from './gmail-sender';
 
 // Statuses that should NEVER be overwritten by Gmail sync
 // These are manually-set statuses that indicate human decisions
@@ -488,6 +489,10 @@ export class GmailSyncService {
         if (lead) {
           console.log(`📧 BOUNCE detected for lead: ${lead.name} (${bouncedEmail})`);
           
+          // CRITICAL: Cancel any pending follow-up emails for this lead!
+          // Email bounced, so we should NOT send more emails.
+          await cancelPendingEmailsForLead(lead.id, 'Email bounced');
+          
           const oldStatus = lead.status;
           
           // Update lead status to bounced
@@ -565,6 +570,10 @@ export class GmailSyncService {
     }
 
     console.log(`📧 Received reply from lead: ${lead.name} (${fromEmail})`);
+
+    // CRITICAL: Cancel any pending follow-up emails for this lead!
+    // They replied, so we should NOT send more automated follow-ups.
+    await cancelPendingEmailsForLead(lead.id, 'Lead replied to email');
 
     // Classify the reply
     const newStatus = await this.classifyReply(body, subject || '');

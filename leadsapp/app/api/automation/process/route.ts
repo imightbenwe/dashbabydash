@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { logLeadActivity } from '@/lib/activity-logger';
+import { verifyCronSecret, unauthorizedCronResponse } from '@/lib/cron-security';
 
 /**
  * Automation Process API
  * Checks for leads that need automation and processes them through stages:
  * Stage 0 -> 1: Website scraping (2 min after creation)
  * Stage 1 -> 2: AI analysis (1 min after scraping)
+ * 
+ * SECURITY: Requires CRON_SECRET for production use.
  */
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
+  // Verify CRON_SECRET for automated calls
+  if (!verifyCronSecret(request)) {
+    return NextResponse.json(unauthorizedCronResponse(), { status: 401 });
+  }
+
   try {
     console.log('🤖 Starting automation check...');
     

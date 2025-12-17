@@ -63,12 +63,13 @@ export async function POST(request: NextRequest) {
     // Collect all leads that need emails
     const leadsToQueue: Array<{ lead: any; emailType: string; reason: string }> = [];
 
-    // 1. Leads needing initial email
+    // 1. Leads needing initial email (must have completed automation - stage 2)
     const { data: initialLeads } = await supabaseAdmin
       .from('leads')
       .select('*')
       .is('date_contacted', null)
-      .not('email', 'is', null);
+      .not('email', 'is', null)
+      .eq('automation_stage', 2);  // Only fully analyzed leads
 
     for (const lead of initialLeads || []) {
       if (EXCLUDED_STATUSES.includes(lead.status)) continue;

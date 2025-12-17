@@ -21,13 +21,5 @@
     "body": "Hi {firstName},\n\nI'll close the loop after this.\n\nIf streamlining your online flow would be useful at some point, feel free to reply with \"later\" or \"curious\" and I'll take it from there.\n\nIf this isn't relevant, feel free to ignore this... I won't keep following up.\n\nWarm regards,",
     "daysAfter": 7,
     "description": "Final follow-up (7-10 days after follow-up #2, polite close-out)"
-  },
-  "follow_up_1": {
-    "subject": "Made your site live",
-    "body": "{firstName}, I know you've got a million things going on. Finding time for this is tough.\n\nTBH, I was thinking about you over the weekend and got a little carried away. I was so convinced your work could look incredible that I went ahead and made your site live.\n\nHere it is: {mockupUrl}\n\nLet me know what you think."
-  },
-  "follow_up_2": {
-    "subject": "Quick follow-up",
-    "body": "{firstName},\n\nI'm sure you're swamped. Just wanted to make sure the live site link didn't get buried.\n\nIf the timing isn't right, totally understand. Just let me know either way?"
   }
 }

@@ -54,8 +54,9 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     const emailThreadId = threadId || lead?.gmail_thread_id;
     const replyToMessageId = messageId || lead?.gmail_message_id;
 
-    // Build the email message
+    // Build the email message with From name
     const emailLines = [
+      `From: Kayden West <${userEmail}>`,
       `To: ${to}`,
       `Subject: ${subject}`,
       'Content-Type: text/html; charset="UTF-8"',

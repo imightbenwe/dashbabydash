@@ -70,6 +70,8 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
 
   // Fetch lead data when component mounts
   useEffect(() => {
+    let isMounted = true;
+    
     if (leadId) {
       const loadData = async () => {
         setIsLoading(true);
@@ -82,19 +84,36 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
           ]);
         } catch (err) {
           // Error already handled in fetchLeadData
-          console.error('Load error:', err);
+          if (isMounted) {
+            console.error('Load error:', err);
+          }
         } finally {
-          setIsLoading(false);
+          if (isMounted) {
+            setIsLoading(false);
+          }
         }
       };
       
       loadData();
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [leadId]);
 
   const fetchLeadData = async (id: string, retryCount = 0): Promise<void> => {
+    // Create abort controller with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+    
     try {
-      const response = await fetch(`/api/leads/${id}`);
+      const response = await fetch(`/api/leads/${id}`, {
+        signal: controller.signal,
+        cache: 'no-store', // Prevent caching issues
+      });
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
         throw new Error(`Failed to load lead: ${response.status}`);
       }
@@ -125,7 +144,15 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       // Check if domain is blacklisted
       checkBlacklist(data.lead.email, data.lead.website);
     } catch (err) {
+      // Ignore abort errors (happen when component unmounts during fetch)
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Fetch aborted (component unmounted or timeout)');
+        return;
+      }
+      
+      clearTimeout(timeoutId);
       console.error('Failed to fetch lead:', err);
+      
       // Retry on network errors with exponential backoff
       const errorMessage = err instanceof Error ? err.message : 'Failed to load lead';
       const isNetworkError = errorMessage.toLowerCase().includes('fetch') || 

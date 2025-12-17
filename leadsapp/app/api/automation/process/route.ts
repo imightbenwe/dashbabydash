@@ -5,12 +5,17 @@ import { verifyCronSecret, unauthorizedCronResponse } from '@/lib/cron-security'
 
 // Get the base URL for internal API calls
 function getBaseUrl(): string {
-  // Use VERCEL_URL if available (Vercel deployment)
+  // Priority: LEADSAPP_URL > NEXT_PUBLIC_APP_URL > VERCEL_URL > localhost
+  if (process.env.LEADSAPP_URL) {
+    return process.env.LEADSAPP_URL;
+  }
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
-  // Fall back to NEXT_PUBLIC_APP_URL or localhost
-  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  return 'http://localhost:3000';
 }
 
 /**
@@ -26,6 +31,11 @@ export async function POST(request: NextRequest) {
   if (!verifyCronSecret(request)) {
     return NextResponse.json(unauthorizedCronResponse(), { status: 401 });
   }
+
+  // Get base URL from request origin if not set in env
+  const requestUrl = new URL(request.url);
+  const baseUrl = getBaseUrl() || `${requestUrl.protocol}//${requestUrl.host}`;
+  console.log(`🔗 Using base URL: ${baseUrl}`);
 
   try {
     console.log('🤖 Starting automation check...');
@@ -64,7 +74,6 @@ export async function POST(request: NextRequest) {
           console.log(`🔍 Scraping website for ${lead.name}...`);
           
           // Call the scraping API
-          const baseUrl = getBaseUrl();
           const scrapeResponse = await fetch(`${baseUrl}/api/scraper/deep`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -192,7 +201,6 @@ export async function POST(request: NextRequest) {
           console.log(`🧠 Running AI analysis for ${lead.name}...`);
           
           // Call the AI analysis API
-          const baseUrl = getBaseUrl();
           const analysisResponse = await fetch(`${baseUrl}/api/leads/${lead.id}/run-analysis`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

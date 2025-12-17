@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Brain, ArrowLeft, Sparkles, Database, Mail, Save, Edit2, ExternalLink, Instagram, Facebook, Linkedin, FileText, MessageSquare, Globe, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { FollowupTimeline } from '@/components/gmail/FollowupTimeline';
 import { LeadActivityLog } from '@/components/gmail/LeadActivityLog';
 
-export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function LeadDetailPage() {
   const router = useRouter();
-  // Use React's `use()` to unwrap the params Promise properly
-  const { id: leadId } = use(params);
+  // Use useParams hook instead of use() for more stable behavior
+  const params = useParams();
+  const leadId = params.id as string;
   
   const [lead, setLead] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);

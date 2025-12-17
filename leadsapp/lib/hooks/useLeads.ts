@@ -38,8 +38,9 @@ export function useLeads(): UseLeadsReturn {
       if (filters?.status) params.set('status', filters.status);
       if (filters?.dateFrom) params.set('dateFrom', filters.dateFrom);
       if (filters?.dateTo) params.set('dateTo', filters.dateTo);
-      // Fetch all leads by setting a very high limit
-      params.set('limit', '999999');
+      if (filters?.search) params.set('search', filters.search);
+      // Use reasonable limit to prevent memory/performance issues
+      params.set('limit', '500');
 
       const response = await fetch(`/api/leads?${params.toString()}`);
       

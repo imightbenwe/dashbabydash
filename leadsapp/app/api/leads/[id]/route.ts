@@ -134,22 +134,16 @@ export async function GET(
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
-    // Fetch related data
-    const { data: rawData } = await supabaseAdmin
-      .from('raw_data_sources')
-      .select('*')
-      .eq('lead_id', id);
+    // Fetch all related data in PARALLEL for much faster response
+    const [rawDataResult, analysesResult, emailsResult] = await Promise.all([
+      supabaseAdmin.from('raw_data_sources').select('*').eq('lead_id', id),
+      supabaseAdmin.from('ai_analyses').select('*').eq('lead_id', id),
+      supabaseAdmin.from('generated_emails').select('*').eq('lead_id', id).order('created_at', { ascending: false })
+    ]);
 
-    const { data: analyses } = await supabaseAdmin
-      .from('ai_analyses')
-      .select('*')
-      .eq('lead_id', id);
-
-    const { data: emails } = await supabaseAdmin
-      .from('generated_emails')
-      .select('*')
-      .eq('lead_id', id)
-      .order('created_at', { ascending: false });
+    const rawData = rawDataResult.data;
+    const analyses = analysesResult.data;
+    const emails = emailsResult.data;
 
     console.log('✅ Lead data fetched successfully');
 

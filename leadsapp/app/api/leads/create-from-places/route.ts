@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
       const { data: lead, error: leadError } = await supabaseAdmin
         .from('leads')
         .insert({
-          company_name: place.place_name,
+          name: place.place_name,
+          company: place.place_name,
           website: place.website,
           status: isBlacklisted ? 'lost' : 'lead_collected',
           automation_stage: isBlacklisted ? -1 : 0, // -1 = blacklisted, 0 = Queued for automation

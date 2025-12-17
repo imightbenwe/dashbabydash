@@ -126,11 +126,12 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       checkBlacklist(data.lead.email, data.lead.website);
     } catch (err) {
       console.error('Failed to fetch lead:', err);
-      // Retry once on network errors (like "Failed to fetch")
+      // Retry on network errors (like "Failed to fetch" or TypeError)
       const errorMessage = err instanceof Error ? err.message : 'Failed to load lead';
-      if (retryCount < 1 && errorMessage.includes('fetch')) {
-        console.log('Retrying fetch...');
-        await new Promise(resolve => setTimeout(resolve, 500));
+      const isNetworkError = errorMessage.toLowerCase().includes('fetch') || err instanceof TypeError;
+      if (retryCount < 2 && isNetworkError) {
+        console.log(`Retrying fetch (attempt ${retryCount + 2})...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
         return fetchLeadData(id, retryCount + 1);
       }
       setLoadError(errorMessage);

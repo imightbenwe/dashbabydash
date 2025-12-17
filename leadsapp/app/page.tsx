@@ -230,7 +230,8 @@ export default function Home() {
         {currentTab === 'google-places' && (
           <GooglePlacesSearch 
             onLeadsCreated={(count) => {
-              alert(`${count} leads created successfully! Switch to CRM tab to view them.`);
+              // Alert is shown by the component itself
+              console.log(`${count} leads created`);
             }}
           />
         )}

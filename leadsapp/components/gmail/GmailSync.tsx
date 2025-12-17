@@ -67,10 +67,10 @@ export function GmailSync() {
   
   // Email rate limiting settings
   const [emailsPerHour, setEmailsPerHour] = useState(10); // Default 10 per hour
-  const [sendingSchedule, setSendingSchedule] = useState('business'); // Default business hours
+  const [sendingSchedule, setSendingSchedule] = useState('around_clock'); // Default 24/7
   const [sendingTimezone, setSendingTimezone] = useState('America/New_York'); // Default US Eastern
   
-  // Load all settings from localStorage
+  // Load all settings from localStorage AND database
   useEffect(() => {
     const savedTestMode = localStorage.getItem('gmail_test_mode');
     if (savedTestMode !== null) {
@@ -82,20 +82,38 @@ export function GmailSync() {
       setSyncInterval(parseInt(savedSyncInterval, 10));
     }
     
-    const savedEmailsPerHour = localStorage.getItem('gmail_emails_per_hour');
-    if (savedEmailsPerHour !== null) {
-      setEmailsPerHour(parseInt(savedEmailsPerHour, 10));
-    }
-    
-    const savedSendingSchedule = localStorage.getItem('gmail_sending_schedule');
-    if (savedSendingSchedule !== null) {
-      setSendingSchedule(savedSendingSchedule);
-    }
-    
-    const savedTimezone = localStorage.getItem('gmail_sending_timezone');
-    if (savedTimezone !== null) {
-      setSendingTimezone(savedTimezone);
-    }
+    // Load email settings from database (server-side settings)
+    const loadSettingsFromDB = async () => {
+      try {
+        const response = await fetch('/api/gmail/settings');
+        if (response.ok) {
+          const data = await response.json();
+          setEmailsPerHour(data.emailsPerHour || 10);
+          setSendingSchedule(data.sendingSchedule || 'around_clock');
+          setSendingTimezone(data.sendingTimezone || 'America/New_York');
+          // Also update localStorage for consistency
+          localStorage.setItem('gmail_emails_per_hour', String(data.emailsPerHour || 10));
+          localStorage.setItem('gmail_sending_schedule', data.sendingSchedule || 'around_clock');
+          localStorage.setItem('gmail_sending_timezone', data.sendingTimezone || 'America/New_York');
+        }
+      } catch (error) {
+        console.error('Failed to load settings from DB:', error);
+        // Fall back to localStorage
+        const savedEmailsPerHour = localStorage.getItem('gmail_emails_per_hour');
+        if (savedEmailsPerHour !== null) {
+          setEmailsPerHour(parseInt(savedEmailsPerHour, 10));
+        }
+        const savedSendingSchedule = localStorage.getItem('gmail_sending_schedule');
+        if (savedSendingSchedule !== null) {
+          setSendingSchedule(savedSendingSchedule);
+        }
+        const savedTimezone = localStorage.getItem('gmail_sending_timezone');
+        if (savedTimezone !== null) {
+          setSendingTimezone(savedTimezone);
+        }
+      }
+    };
+    loadSettingsFromDB();
   }, []);
   
   // Save test mode preference
@@ -111,22 +129,52 @@ export function GmailSync() {
     localStorage.setItem('gmail_sync_interval', String(value));
   };
   
-  // Save emails per hour
-  const handleEmailsPerHourChange = (value: number) => {
+  // Save emails per hour to both localStorage and database
+  const handleEmailsPerHourChange = async (value: number) => {
     setEmailsPerHour(value);
     localStorage.setItem('gmail_emails_per_hour', String(value));
+    // Save to database so cron job can read it
+    try {
+      await fetch('/api/gmail/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailsPerHour: value }),
+      });
+    } catch (error) {
+      console.error('Failed to save settings to DB:', error);
+    }
   };
   
-  // Save sending schedule
-  const handleSendingScheduleChange = (value: string) => {
+  // Save sending schedule to both localStorage and database
+  const handleSendingScheduleChange = async (value: string) => {
     setSendingSchedule(value);
     localStorage.setItem('gmail_sending_schedule', value);
+    // Save to database so cron job can read it
+    try {
+      await fetch('/api/gmail/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sendingSchedule: value }),
+      });
+    } catch (error) {
+      console.error('Failed to save settings to DB:', error);
+    }
   };
   
-  // Save sending timezone
-  const handleTimezoneChange = (value: string) => {
+  // Save sending timezone to both localStorage and database
+  const handleTimezoneChange = async (value: string) => {
     setSendingTimezone(value);
     localStorage.setItem('gmail_sending_timezone', value);
+    // Save to database so cron job can read it
+    try {
+      await fetch('/api/gmail/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sendingTimezone: value }),
+      });
+    } catch (error) {
+      console.error('Failed to save settings to DB:', error);
+    }
   };
 
   useEffect(() => {

@@ -30,11 +30,26 @@ interface CronConfig {
 const DEFAULT_CONFIG: CronConfig = {
   batchSize: 5,
   sendingTimezone: 'America/New_York',
-  businessHoursStart: 9,   // 9 AM
-  businessHoursEnd: 18,    // 6 PM
-  enableWeekends: false,
+  businessHoursStart: 0,   // Default to 24/7
+  businessHoursEnd: 24,    // Default to 24/7
+  enableWeekends: true,    // Default to 24/7
   stuckThresholdMinutes: 10,
 };
+
+/**
+ * Convert sending_schedule string to business hours config
+ */
+function getBusinessHoursFromSchedule(schedule: string): { start: number; end: number; enableWeekends: boolean } {
+  switch (schedule) {
+    case 'business':
+      return { start: 9, end: 18, enableWeekends: false };
+    case 'extended':
+      return { start: 7, end: 21, enableWeekends: true };
+    case 'around_clock':
+    default:
+      return { start: 0, end: 24, enableWeekends: true };
+  }
+}
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -113,10 +128,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Get Gmail user email (for sending)
+    // 4. Get Gmail user email AND settings from database
     const { data: gmailAuth } = await supabaseAdmin
       .from('user_gmail_auth')
-      .select('user_email')
+      .select('user_email, emails_per_hour, sending_schedule, sending_timezone')
       .eq('gmail_sync_enabled', true)
       .single();
     
@@ -127,6 +142,20 @@ export async function POST(request: NextRequest) {
     }
     
     const userEmail = gmailAuth.user_email;
+
+    // Override config with database settings (user's actual preferences)
+    if (gmailAuth.sending_schedule) {
+      const hours = getBusinessHoursFromSchedule(gmailAuth.sending_schedule);
+      config.businessHoursStart = hours.start;
+      config.businessHoursEnd = hours.end;
+      config.enableWeekends = hours.enableWeekends;
+      console.log(`📧 Using schedule from DB: ${gmailAuth.sending_schedule} (${hours.start}:00-${hours.end}:00, weekends: ${hours.enableWeekends})`);
+    }
+    if (gmailAuth.sending_timezone) {
+      config.sendingTimezone = gmailAuth.sending_timezone;
+    }
+    // Update results.config to reflect actual values used
+    results.config = config;
 
     // 5. Claim batch of emails atomically
     const { data: claimedEmails, error: claimError } = await supabaseAdmin

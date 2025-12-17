@@ -82,11 +82,23 @@ export async function POST(request: NextRequest) {
         const phonesInHtml: string[] = [];
         const socialLinks: { instagram?: string; facebook?: string; linkedin?: string } = {};
         
+        // Helper to clean and validate email
+        const cleanEmail = (email: string): string | null => {
+          if (!email) return null;
+          // Remove any trailing text after common TLDs
+          const cleaned = email.toLowerCase().trim()
+            .replace(/(\.com|\.net|\.org|\.co|\.io|\.uk|\.edu|\.gov|\.biz|\.info|\.me|\.co\.uk).*$/i, '$1');
+          // Validate email format
+          const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|net|org|co|io|uk|edu|gov|biz|info|me|co\.uk)$/i;
+          return emailPattern.test(cleaned) ? cleaned : null;
+        };
+
         // Look for mailto: links
         $('a[href^="mailto:"]').each((_, el) => {
           const href = $(el).attr('href');
           if (href) {
-            const email = href.replace('mailto:', '').split('?')[0] || ''; // Remove query params
+            const rawEmail = href.replace('mailto:', '').split('?')[0] || ''; // Remove query params
+            const email = cleanEmail(rawEmail);
             if (email) emailsInHtml.push(email);
           }
         });

@@ -87,23 +87,37 @@ export async function POST(request: NextRequest) {
           const scrapeData = await scrapeResponse.json();
           const scrapedContent = scrapeData.content || '';
 
+          // Helper function to validate and clean email
+          const cleanEmail = (email: string): string | null => {
+            if (!email) return null;
+            // Remove any trailing text after common TLDs
+            const cleaned = email.toLowerCase().trim()
+              .replace(/(\.com|\.net|\.org|\.co|\.io|\.uk|\.edu|\.gov|\.biz|\.info|\.me|\.co\.uk).*$/i, '$1');
+            // Validate email format
+            const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|net|org|co|io|uk|edu|gov|biz|info|me|co\.uk)$/i;
+            return emailPattern.test(cleaned) ? cleaned : null;
+          };
+
           // Extract email from scraped content
           const emailRegex = /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g;
           const emails = scrapedContent.match(emailRegex);
-          const validEmails = emails?.filter((email: string) => 
+          const validEmails = emails?.map(e => cleanEmail(e)).filter((email): email is string => 
+            email !== null &&
             !email.includes('example.com') && 
             !email.includes('domain.com') &&
             !email.includes('yourdomain.com') &&
             !email.includes('wix.com') &&
-            !email.includes('wordpress.com')
+            !email.includes('wordpress.com') &&
+            !email.includes('sentry.io')
           );
 
           let extractedEmail = null;
           const emailsFoundMatch = scrapedContent.match(/EMAILS FOUND:\s*([^\n]+)/);
           if (emailsFoundMatch && emailsFoundMatch[1]) {
-            const foundEmails = emailsFoundMatch[1].split(',').map((e: string) => e.trim());
-            extractedEmail = foundEmails[0];
-          } else if (validEmails && validEmails.length > 0) {
+            const foundEmails = emailsFoundMatch[1].split(',').map((e: string) => cleanEmail(e.trim())).filter(Boolean);
+            extractedEmail = foundEmails[0] || null;
+          }
+          if (!extractedEmail && validEmails && validEmails.length > 0) {
             extractedEmail = validEmails[0];
           }
 

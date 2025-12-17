@@ -23,9 +23,40 @@ concurrency:
   cancel-in-progress: false  # Don't cancel running jobs
 
 jobs:
+  process-automation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Process Automation Queue
+        env:
+          APP_URL: ${{ secrets.LEADSAPP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          echo "🤖 Processing automation queue..."
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/automation/process")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Automation processing completed"
+          else
+            echo "⚠️ Automation processing returned HTTP $HTTP_CODE (continuing anyway)"
+          fi
+
   send-emails:
     runs-on: ubuntu-latest
-    timeout-minutes: 5  # Hard timeout to prevent runaway jobs
+    timeout-minutes: 5
+    needs: process-automation  # Run after automation processing
     
     steps:
       - name: Call Email Scheduler Endpoint

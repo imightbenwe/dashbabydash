@@ -7,6 +7,7 @@
 
 import { gmailOAuthService } from './gmail-oauth-service';
 import { supabaseAdmin } from './supabase/admin';
+import emailTemplates from './email-templates.json';
 
 export interface SendEmailParams {
   leadId: string;
@@ -67,9 +68,10 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
       emailLines.push(`References: ${replyToMessageId}`);
     }
 
-    // Add empty line and body
+    // Add empty line and body with signature
+    const signature = (emailTemplates as any).signature || '';
     emailLines.push('');
-    emailLines.push(emailBody);
+    emailLines.push(emailBody + signature);
 
     // Encode the email in base64url format
     const rawEmail = Buffer.from(emailLines.join('\r\n'))

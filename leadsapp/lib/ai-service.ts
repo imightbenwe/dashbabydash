@@ -174,12 +174,11 @@ export async function generateEmailWithOpenAI(
       'I help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\n\n' +
       'If you want, I can take a quick look and tell you exactly where the bottleneck is.\n\n' +
       'Would that be useful?\n\n' +
-      'Cheers,\n' +
-      'Koen\n\n' +
+      'Best,\n\n' +
       'OUTPUT FORMAT (JSON):\n' +
       '{\n' +
       '  "subject": "Quick note after seeing your work",\n' +
-      '  "body": "Hi ' + firstName + ',\\n\\n' + emailOpening + '\\n\\nQuick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\\n\\nI help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\\n\\nIf you want, I can take a quick look and tell you exactly where the bottleneck is.\\n\\nWould that be useful?\\n\\nCheers,\\nKoen"\n' +
+      '  "body": "Hi ' + firstName + ',\\n\\n' + emailOpening + '\\n\\nQuick question: is anything in your online flow currently slowing you down (website, automations, client funnel)?\\n\\nI help spiritual entrepreneurs streamline their systems so they attract more ideal clients with less effort.\\n\\nIf you want, I can take a quick look and tell you exactly where the bottleneck is.\\n\\nWould that be useful?\\n\\nBest,"\n' +
       '}\n\n' +
       'CRITICAL: The subject field MUST be exactly "Quick note after seeing your work" - do not change it.';
       '}';
@@ -195,19 +194,19 @@ export async function generateEmailWithOpenAI(
       '"' + firstName + ', I know you\'ve got a million things going on. Finding time for this is tough.\n\n' +
       'TBH, I was thinking about you over the weekend and got a little carried away. I was so convinced your work could look incredible that I went ahead and made your site live.\n\n' +
       'Here it is: [Live URL]\n\n' +
-      'Let me know what you think.\n\n' +
-      'Koen"\n\n' +
+      'Let me know what you think."\n\n' +
       'RULES:\n' +
       '- Casual, friendly tone\n' +
       '- Show you already did the work\n' +
       '- Remove all friction\n' +
       '- No pressure\n' +
       '- Under 75 words\n' +
-      '- Use simple ASCII characters only, no special unicode symbols\n\n' +
+      '- Use simple ASCII characters only, no special unicode symbols\n' +
+      '- Do NOT include a signature line - signature is added automatically\n\n' +
       'Return JSON:\n' +
       '{\n' +
       '  "subject": "Made your site live",\n' +
-      '  "body": "Full email body with [Live URL] placeholder, signed as Koen"\n' +
+      '  "body": "Full email body with [Live URL] placeholder, no signature"\n' +
       '}';
   } else if (emailType === 'follow_up_2') {
     userPrompt = 'Write a final gentle follow-up email to ' + prospectName + '.\n\n' +
@@ -217,17 +216,16 @@ export async function generateEmailWithOpenAI(
       'Example structure:\n' +
       '"' + firstName + ', \n\n' +
       'I\'m sure you\'re swamped. Just wanted to make sure the live site link didn\'t get buried.\n\n' +
-      'If the timing isn\'t right, totally understand. Just let me know either way?\n\n' +
-      'Koen"\n\n' +
+      'If the timing isn\'t right, totally understand. Just let me know either way?"\n\n' +
       'RULES:\n' +
       '- Under 50 words\n' +
       '- Friendly, no pressure\n' +
       '- Use simple ASCII characters only\n' +
-      '- Signed as Koen\n\n' +
+      '- Do NOT include a signature line - signature is added automatically\n\n' +
       'Return JSON:\n' +
       '{\n' +
       '  "subject": "Quick follow-up",\n' +
-      '  "body": "Full email body signed as Koen"\n' +
+      '  "body": "Full email body, no signature"\n' +
       '}';
   }
 

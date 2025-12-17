@@ -560,3 +560,42 @@ function calculateScheduledTime(
 
   return currentTime;
 }
+
+/**
+ * DELETE /api/gmail/approve-queue
+ * 
+ * Removes items from the email_send_queue by ID
+ * 
+ * Body:
+ * - queueIds: Array of queue item IDs to remove
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { queueIds = [] } = body;
+
+    if (!queueIds || queueIds.length === 0) {
+      return NextResponse.json({ error: 'No queue IDs provided' }, { status: 400 });
+    }
+
+    console.log(`🗑️ Removing ${queueIds.length} items from email queue`);
+
+    const { error } = await supabaseAdmin
+      .from('email_send_queue')
+      .delete()
+      .in('id', queueIds);
+
+    if (error) {
+      console.error('Failed to delete queue items:', error);
+      return NextResponse.json({ error: 'Failed to remove items' }, { status: 500 });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      removed: queueIds.length 
+    });
+  } catch (error) {
+    console.error('Error in DELETE /api/gmail/approve-queue:', error);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}

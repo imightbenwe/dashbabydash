@@ -823,6 +823,31 @@ export function FollowupPipeline() {
                           })}
                         </span>
                       )}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (confirm(`Remove ${leadName} from queue?`)) {
+                            try {
+                              const res = await fetch('/api/gmail/approve-queue', {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ queueIds: [item.id] }),
+                              });
+                              if (res.ok) {
+                                await fetchDbQueue();
+                              } else {
+                                alert('Failed to remove');
+                              }
+                            } catch (err) {
+                              alert('Error removing from queue');
+                            }
+                          }
+                        }}
+                        className="ml-2 p-1 text-red-500 hover:bg-red-50 rounded"
+                        title="Remove from queue"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                   {isExpanded && (

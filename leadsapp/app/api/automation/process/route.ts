@@ -3,6 +3,16 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { logLeadActivity } from '@/lib/activity-logger';
 import { verifyCronSecret, unauthorizedCronResponse } from '@/lib/cron-security';
 
+// Get the base URL for internal API calls
+function getBaseUrl(): string {
+  // Use VERCEL_URL if available (Vercel deployment)
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  // Fall back to NEXT_PUBLIC_APP_URL or localhost
+  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+}
+
 /**
  * Automation Process API
  * Checks for leads that need automation and processes them through stages:
@@ -54,7 +64,8 @@ export async function POST(request: NextRequest) {
           console.log(`🔍 Scraping website for ${lead.name}...`);
           
           // Call the scraping API
-          const scrapeResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/scraper/deep`, {
+          const baseUrl = getBaseUrl();
+          const scrapeResponse = await fetch(`${baseUrl}/api/scraper/deep`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: lead.website }),
@@ -181,7 +192,8 @@ export async function POST(request: NextRequest) {
           console.log(`🧠 Running AI analysis for ${lead.name}...`);
           
           // Call the AI analysis API
-          const analysisResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/leads/${lead.id}/run-analysis`, {
+          const baseUrl = getBaseUrl();
+          const analysisResponse = await fetch(`${baseUrl}/api/leads/${lead.id}/run-analysis`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
           });

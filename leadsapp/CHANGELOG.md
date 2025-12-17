@@ -23,6 +23,7 @@ Major improvements to the automation pipeline, email formatting, and data qualit
 - **Automation URL**: Fixed internal API calls to use `LEADSAPP_URL` or request origin (was failing on Vercel)
 - **Email Extraction**: Emails now cleaned and validated - strips trailing text after TLD (e.g., `.comINSTAGRAM` → `.com`)
 - **Pipeline Gating**: Leads only enter email queue after AI analysis complete (automation_stage = 2)
+- **TypeScript Strict Mode**: Added explicit type annotations to email validation callbacks (build was failing)
 
 ### Changed
 - **Email Content-Type**: Changed from `text/plain` to `text/html` in Gmail sender

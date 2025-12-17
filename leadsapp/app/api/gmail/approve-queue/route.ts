@@ -206,6 +206,7 @@ export async function PATCH(request: NextRequest) {
 /**
  * DELETE /api/gmail/approve-queue
  * Remove items from the approved queue (cancel pending sends)
+ * Also marks the lead's follow-up as "skipped" so it doesn't get re-queued
  */
 export async function DELETE(request: NextRequest) {
   try {
@@ -216,7 +217,45 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'No queue IDs provided' }, { status: 400 });
     }
 
-    // Only delete items that haven't been sent yet
+    // First, get the queue items to know which leads and email types to mark as skipped
+    const { data: queueItems, error: fetchError } = await supabaseAdmin
+      .from('email_send_queue')
+      .select('id, lead_id, email_type')
+      .in('id', queueIds)
+      .in('status', ['approved', 'failed']);
+
+    if (fetchError) {
+      console.error('Failed to fetch queue items:', fetchError);
+      return NextResponse.json({ error: 'Failed to fetch items' }, { status: 500 });
+    }
+
+    // Mark each lead's follow-up as "skipped" by setting the sent_at timestamp
+    // This prevents the lead from being re-queued for this email type
+    for (const item of queueItems || []) {
+      const updateData: any = {};
+      
+      if (item.email_type === 'followup_1') {
+        updateData.followup_1_sent_at = new Date().toISOString();
+        updateData.followup_1_skipped = true; // Mark as skipped, not actually sent
+      } else if (item.email_type === 'followup_2') {
+        updateData.followup_2_sent_at = new Date().toISOString();
+        updateData.followup_2_skipped = true;
+      } else if (item.email_type === 'followup_3') {
+        updateData.followup_3_sent_at = new Date().toISOString();
+        updateData.followup_3_skipped = true;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await supabaseAdmin
+          .from('leads')
+          .update(updateData)
+          .eq('id', item.lead_id);
+        
+        console.log(`📌 Marked lead ${item.lead_id} ${item.email_type} as skipped`);
+      }
+    }
+
+    // Now delete the queue items
     const { data: deleted, error } = await supabaseAdmin
       .from('email_send_queue')
       .delete()
@@ -231,6 +270,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({
       success: true,
       removed: deleted?.length || 0,
+      skipped: queueItems?.length || 0,
     });
 
   } catch (error) {

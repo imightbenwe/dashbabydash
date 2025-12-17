@@ -103,6 +103,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     const updateData: any = {
       gmail_message_id: sentMessage.data.id,
       updated_at: new Date().toISOString(),
+      last_touch_date: new Date().toISOString(),
     };
 
     // If this is the first email, store the thread ID

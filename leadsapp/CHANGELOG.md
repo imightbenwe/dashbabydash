@@ -2,6 +2,46 @@
 
 All notable changes to PersonaAI will be documented in this file.
 
+## [2.9.0] - 2025-12-17
+
+### 🤖 Automation Flow & Email Improvements
+
+Major improvements to the automation pipeline, email formatting, and data quality.
+
+### Added
+- **Automation Processing in Cron**: GitHub Actions workflow now runs `/api/automation/process` before sending emails
+- **Duplicate Lead Prevention**: CRM now checks for existing leads by name/website before creating new ones
+- **Email Retry Logic**: Lead detail page retries failed fetches automatically (2 retries, 1s delay)
+- **Retry Button**: Added "Retry" button on lead page error state
+
+### Fixed
+- **HTML Email Support**: Emails now send as HTML instead of plain text, enabling styled signatures
+- **Email Signature Styling**: Footer now renders with smaller font (11px) and proper formatting
+- **Signature Pronouns**: Added "(he/him)" after Kayden West in signature
+- **Create From Places**: Fixed `company_name` → `name` + `company` column mapping (was failing silently)
+- **UserId in API**: Added missing `userId: 'demo-user'` to create-from-places API call
+- **Automation URL**: Fixed internal API calls to use `LEADSAPP_URL` or request origin (was failing on Vercel)
+- **Email Extraction**: Emails now cleaned and validated - strips trailing text after TLD (e.g., `.comINSTAGRAM` → `.com`)
+- **Pipeline Gating**: Leads only enter email queue after AI analysis complete (automation_stage = 2)
+
+### Changed
+- **Email Content-Type**: Changed from `text/plain` to `text/html` in Gmail sender
+- **Line Breaks**: Email body now converts `\n` to `<br>` for HTML rendering
+- **Duplicate Alert Removed**: Removed redundant alert from parent page when creating leads
+
+### Email Signature Format
+```
+Kayden West (he/him)
+Tech Alchemist @ Dash Baby Dash
+Helping spiritual coaches + studios fix their backend + booking flows.
+Clean systems → calm business.
+
+🌐 dashbabydash.com
+📧 connect@dashbabydash.com
+```
+
+---
+
 ## [2.8.0] - 2025-12-16
 
 ### 🔐 Production Deployment & Security

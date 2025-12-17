@@ -58,7 +58,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     const emailLines = [
       `To: ${to}`,
       `Subject: ${subject}`,
-      'Content-Type: text/plain; charset="UTF-8"',
+      'Content-Type: text/html; charset="UTF-8"',
       'MIME-Version: 1.0',
     ];
 
@@ -68,10 +68,12 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
       emailLines.push(`References: ${replyToMessageId}`);
     }
 
-    // Add empty line and body with signature
+    // Add empty line and body with signature (convert to HTML)
     const signature = (emailTemplates as any).signature || '';
+    // Convert plain text body to HTML (preserve line breaks)
+    const htmlBody = emailBody.replace(/\n/g, '<br>');
     emailLines.push('');
-    emailLines.push(emailBody + signature);
+    emailLines.push(htmlBody + signature);
 
     // Encode the email in base64url format
     const rawEmail = Buffer.from(emailLines.join('\r\n'))

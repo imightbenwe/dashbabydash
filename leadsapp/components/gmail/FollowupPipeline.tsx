@@ -7,7 +7,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Mail, Clock, Send, CheckCircle, ArrowRight, Zap, Play, Calendar, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mail, Clock, Send, CheckCircle, ArrowRight, Zap, Play, Calendar, User, ChevronDown, ChevronUp, X } from 'lucide-react';
 import Link from 'next/link';
 import emailTemplates from '@/lib/email-templates.json';
 

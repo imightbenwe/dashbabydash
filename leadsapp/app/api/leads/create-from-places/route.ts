@@ -40,9 +40,24 @@ export async function POST(request: NextRequest) {
 
     const createdLeads = [];
     const promotedPlaces = [];
+    const skippedDuplicates = [];
 
     // Create a lead for each place
     for (const place of openLeads) {
+      // Check for existing lead with same name or website to prevent duplicates
+      const { data: existingLead } = await supabaseAdmin
+        .from('leads')
+        .select('id, name, website')
+        .or(`name.eq.${place.place_name},website.eq.${place.website}`)
+        .limit(1)
+        .single();
+
+      if (existingLead) {
+        console.log(`Skipping duplicate: ${place.place_name} (matches existing lead ${existingLead.id})`);
+        skippedDuplicates.push(place);
+        continue;
+      }
+
       // Check if domain is blacklisted
       let isBlacklisted = false;
       let blacklistReason = '';
@@ -127,10 +142,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Also delete skipped duplicates from open_leads (they already exist in CRM)
+    if (skippedDuplicates.length > 0) {
+      const dupPlaceIds = skippedDuplicates.map(p => p.place_id);
+      await supabaseAdmin
+        .from('open_leads')
+        .delete()
+        .eq('user_id', userId)
+        .in('place_id', dupPlaceIds);
+      console.log(`Removed ${dupPlaceIds.length} duplicates from open_leads`);
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Created ${createdLeads.length} leads`,
+      message: `Created ${createdLeads.length} leads${skippedDuplicates.length > 0 ? ` (${skippedDuplicates.length} duplicates skipped)` : ''}`,
       leadsCreated: createdLeads.length,
+      duplicatesSkipped: skippedDuplicates.length,
       leads: createdLeads,
     });
   } catch (error) {

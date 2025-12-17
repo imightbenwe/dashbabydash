@@ -71,19 +71,28 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   // Fetch lead data when component mounts
   useEffect(() => {
     if (leadId) {
-      setIsLoading(true);
-      setLoadError(null);
+      const loadData = async () => {
+        setIsLoading(true);
+        setLoadError(null);
+        
+        try {
+          await Promise.all([
+            fetchLeadData(leadId),
+            fetchLeadAnalysis(leadId)
+          ]);
+        } catch (err) {
+          // Error already handled in fetchLeadData
+          console.error('Load error:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
       
-      Promise.all([
-        fetchLeadData(leadId),
-        fetchLeadAnalysis(leadId)
-      ]).finally(() => {
-        setIsLoading(false);
-      });
+      loadData();
     }
   }, [leadId]);
 
-  const fetchLeadData = async (id: string) => {
+  const fetchLeadData = async (id: string, retryCount = 0): Promise<void> => {
     try {
       const response = await fetch(`/api/leads/${id}`);
       if (!response.ok) {
@@ -117,7 +126,14 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       checkBlacklist(data.lead.email, data.lead.website);
     } catch (err) {
       console.error('Failed to fetch lead:', err);
-      setLoadError(err instanceof Error ? err.message : 'Failed to load lead');
+      // Retry once on network errors (like "Failed to fetch")
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load lead';
+      if (retryCount < 1 && errorMessage.includes('fetch')) {
+        console.log('Retrying fetch...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return fetchLeadData(id, retryCount + 1);
+      }
+      setLoadError(errorMessage);
     }
   };
 
@@ -829,12 +845,27 @@ Last Updated: ${new Date(lead.updated_at).toLocaleString()}
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 mb-4">⚠️ {loadError}</div>
-          <button
-            onClick={() => router.push('/')}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            Back to Pipeline
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => {
+                setLoadError(null);
+                setIsLoading(true);
+                Promise.all([
+                  fetchLeadData(leadId),
+                  fetchLeadAnalysis(leadId)
+                ]).finally(() => setIsLoading(false));
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Back to Pipeline
+            </button>
+          </div>
         </div>
       </div>
     );

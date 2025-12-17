@@ -110,6 +110,22 @@ export async function POST(request: NextRequest) {
       promotedPlaces.push(place);
     }
 
+    // Delete the promoted places from open_leads
+    if (promotedPlaces.length > 0) {
+      const placeIdsToDelete = promotedPlaces.map(p => p.place_id);
+      const { error: deleteError } = await supabaseAdmin
+        .from('open_leads')
+        .delete()
+        .eq('user_id', userId)
+        .in('place_id', placeIdsToDelete);
+      
+      if (deleteError) {
+        console.error('Failed to delete from open_leads:', deleteError);
+      } else {
+        console.log(`Deleted ${placeIdsToDelete.length} places from open_leads`);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: `Created ${createdLeads.length} leads`,

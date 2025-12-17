@@ -196,7 +196,7 @@ export function GooglePlacesSearch({ onLeadsCreated }: GooglePlacesSearchProps) 
       const response = await fetch('/api/leads/create-from-places', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ placeIds }),
+        body: JSON.stringify({ placeIds, userId: 'demo-user' }),
       });
       
       const data = await response.json();
